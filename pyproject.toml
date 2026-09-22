@@ -38,9 +38,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-
-[tool.ruff.format]
-quote-style = "single"
+ignore = ["UP031"]   # проект сознательно использует %-форматирование
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

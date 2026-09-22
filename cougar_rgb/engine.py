@@ -84,4 +84,4 @@ class Engine:
             return frame
         idle = self.params.idle
         idle_frame = EFFECTS[idle.name].render(t, idle) if idle else [(0, 0, 0)] * len(frame)
-        return [mix(a, b, self.idle_k) for a, b in zip(frame, idle_frame)]
+        return [mix(a, b, self.idle_k) for a, b in zip(frame, idle_frame, strict=True)]

@@ -124,5 +124,5 @@ def main():
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
-        raise SystemExit('cougar-rgb daemon is already running')
+        raise SystemExit('cougar-rgb daemon is already running') from None
     Daemon().run()

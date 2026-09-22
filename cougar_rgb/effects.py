@@ -29,7 +29,7 @@ def hsv(h, s=1.0, v=1.0):
 
 
 def mix(a, b, t):
-    return tuple(x + (y - x) * t for x, y in zip(a, b))
+    return tuple(x + (y - x) * t for x, y in zip(a, b, strict=True))
 
 
 def scale(rgb, k):
