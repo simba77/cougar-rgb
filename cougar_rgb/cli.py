@@ -7,7 +7,7 @@ from pathlib import Path
 from . import daemon
 from .config import Config
 from .device import DeviceNotFound, Fusion2
-from .effects import EFFECTS
+from .effects import EFFECTS, IDLE_CHOICES
 from .engine import Engine
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +44,10 @@ def cmd_set(args):
         opts['reverse'] = args.reverse
     if args.random is not None:
         opts['random'] = args.random
+    if args.idle is not None:
+        if not EFFECTS[cfg.effect].audio:
+            sys.exit('--idle задаётся только для музыкальных эффектов')
+        opts['idle'] = args.idle
     if args.brightness is not None:
         cfg.brightness = args.brightness
     cfg.save()
@@ -120,6 +124,7 @@ def main():
     p.add_argument('-s', '--speed', type=int, choices=range(1, 11), metavar='1-10')
     p.add_argument('--reverse', action=argparse.BooleanOptionalAction, default=None, help='обратное направление')
     p.add_argument('--random', action=argparse.BooleanOptionalAction, default=None, help='случайные цвета')
+    p.add_argument('--idle', choices=IDLE_CHOICES, help='что показывать в тишине (для музыкальных эффектов)')
     p.set_defaults(func=cmd_set)
 
     sub.add_parser('daemon', help='фоновая служба').set_defaults(func=cmd_daemon)

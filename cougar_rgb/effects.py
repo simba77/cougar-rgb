@@ -39,10 +39,12 @@ def scale(rgb, k):
 @dataclass
 class Params:
     colors: list
+    name: str = ''
     brightness: int = 100
     speed: int = 5
     reverse: bool = False
     random: bool = False
+    idle: object = None              # Params эффекта для тишины (только у музыкальных)
 
     def rgb(self, i):
         return parse_color(self.colors[i % len(self.colors)])
@@ -334,6 +336,11 @@ EFFECTS = {e.name: e for e in [
     SwCustom('sw_custom', 'Свои цвета по диодам', 'sw', colors=LED_COUNT, has_speed=False,
              default_colors=[to_hex(hsv(i / LED_COUNT)) for i in range(LED_COUNT)]),
 ]}
+
+
+IDLE_NONE = 'none'
+IDLE_CHOICES = [IDLE_NONE] + [name for name, e in EFFECTS.items() if e.kind == 'sw' and not e.audio]
+IDLE_DEFAULT = 'sw_rainbow'
 
 
 def apply_brightness(frame, brightness):

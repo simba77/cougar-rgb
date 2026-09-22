@@ -37,7 +37,8 @@ class Features:
     treble: float = 0.0
     level: float = 0.0       # общая громкость 0..1
     beats: int = 0           # счётчик ударов баса
-    time: float = 0.0
+    time: float = 0.0        # когда посчитано (time.monotonic)
+    active: bool = False     # есть звук выше порога тишины
 
 
 class Analyzer:
@@ -148,7 +149,7 @@ class Analyzer:
                 bass_avg += (bass - bass_avg) * BEAT_AVG
 
                 self.features = Features(bass=bass, mid=values['mid'], treble=values['treble'],
-                                         level=rms / peak_level, beats=beats, time=now)
+                                         level=rms / peak_level, beats=beats, time=now, active=True)
         finally:
             self._proc.terminate()
             self._proc.wait()

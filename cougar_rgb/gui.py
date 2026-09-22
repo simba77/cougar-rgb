@@ -7,7 +7,7 @@ import time
 
 from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen, QRadialGradient
-from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QFormLayout, QGroupBox, QHBoxLayout,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox, QFormLayout, QGroupBox, QHBoxLayout,
                                QLabel, QListWidget, QListWidgetItem, QMainWindow, QPushButton, QSlider,
                                QVBoxLayout, QWidget)
 
@@ -15,7 +15,7 @@ from . import daemon
 from .cli import ROOT, SERVICE_PATH
 from .config import Config
 from .device import LED_COUNT, Fusion2
-from .effects import EFFECTS, apply_brightness
+from .effects import EFFECTS, IDLE_CHOICES, IDLE_NONE, apply_brightness
 from .engine import Engine
 
 
@@ -116,6 +116,11 @@ class MainWindow(QMainWindow):
         self.reverse.toggled.connect(self.changed)
         self.random = QCheckBox('Случайные цвета')
         self.random.toggled.connect(self.changed)
+        self.idle = QComboBox()
+        for name in IDLE_CHOICES:
+            self.idle.addItem('Выключено' if name == IDLE_NONE else EFFECTS[name].title, name)
+        self.idle.currentIndexChanged.connect(self.changed)
+        self.idle_label = QLabel('Когда тихо')
 
         form = QFormLayout()
         form.addRow(self.colors_label, colors_row)
@@ -124,6 +129,7 @@ class MainWindow(QMainWindow):
         form.addRow(self.speed_label, self.speed_row)
         form.addRow('', self.reverse)
         form.addRow('', self.random)
+        form.addRow(self.idle_label, self.idle)
         params = QGroupBox('Параметры')
         params.setLayout(form)
 
@@ -203,6 +209,10 @@ class MainWindow(QMainWindow):
         self.reverse.setVisible(effect.has_direction)
         self.random.setChecked(opts['random'])
         self.random.setVisible(effect.has_random)
+        if effect.audio:
+            self.idle.setCurrentIndex(self.idle.findData(opts['idle']))
+        self.idle.setVisible(effect.audio)
+        self.idle_label.setVisible(effect.audio)
         self.loading = False
         self.update_labels()
         self.started = time.monotonic()
@@ -221,6 +231,8 @@ class MainWindow(QMainWindow):
         opts['speed'] = self.speed.value()
         opts['reverse'] = self.reverse.isChecked()
         opts['random'] = self.random.isChecked()
+        if effect.audio:
+            opts['idle'] = self.idle.currentData()
         self.cfg.brightness = self.brightness.value()
         self.save_timer.start()
 
