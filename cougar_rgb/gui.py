@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox,
                                QLabel, QListWidget, QListWidgetItem, QMainWindow, QPushButton, QSlider,
                                QVBoxLayout, QWidget)
 
-from . import daemon
+from . import audio, daemon
 from .cli import ROOT, SERVICE_PATH
 from .config import Config
 from .device import LED_COUNT, Fusion2
@@ -121,6 +121,15 @@ class MainWindow(QMainWindow):
             self.idle.addItem('Выключено' if name == IDLE_NONE else EFFECTS[name].title, name)
         self.idle.currentIndexChanged.connect(self.changed)
         self.idle_label = QLabel('Когда тихо')
+        self.sink = audio.default_sink()
+        self.delay = self._slider(0, int(audio.MAX_DELAY * 1000))
+        self.delay.setSingleStep(10)
+        self.delay.setPageStep(50)
+        self.delay_value = QLabel()
+        self.delay_label = QLabel('Задержка света')
+        self.delay_hint = QLabel()
+        self.delay_hint.setStyleSheet('color: gray')
+        self.delay_hint.setWordWrap(True)
 
         form = QFormLayout()
         form.addRow(self.colors_label, colors_row)
@@ -130,6 +139,9 @@ class MainWindow(QMainWindow):
         form.addRow('', self.reverse)
         form.addRow('', self.random)
         form.addRow(self.idle_label, self.idle)
+        self.delay_row = self._with_value(self.delay, self.delay_value)
+        form.addRow(self.delay_label, self.delay_row)
+        form.addRow('', self.delay_hint)
         params = QGroupBox('Параметры')
         params.setLayout(form)
 
@@ -211,15 +223,26 @@ class MainWindow(QMainWindow):
         self.random.setVisible(effect.has_random)
         if effect.audio:
             self.idle.setCurrentIndex(self.idle.findData(opts['idle']))
-        self.idle.setVisible(effect.audio)
-        self.idle_label.setVisible(effect.audio)
+        for w in (self.idle, self.idle_label, self.delay_row, self.delay_label, self.delay_hint):
+            w.setVisible(effect.audio)
+        self.load_delay()
         self.loading = False
         self.update_labels()
         self.started = time.monotonic()
 
+    def load_delay(self):
+        loading, self.loading = self.loading, True
+        self.delay.setValue(self.cfg.audio_delays.get(self.sink, 0))
+        self.delay_hint.setText('Для устройства вывода: %s. Нужна для Bluetooth-наушников — '
+                                'свет ждёт, пока звук дойдёт до ушей.'
+                                % (audio.sink_description(self.sink) if self.sink else 'не найдено'))
+        self.loading = loading
+        self.update_labels()
+
     def update_labels(self):
         self.brightness_value.setText('%d%%' % self.brightness.value())
         self.speed_value.setText(str(self.speed.value()))
+        self.delay_value.setText('%d мс' % self.delay.value())
 
     def changed(self):
         if self.loading:
@@ -234,6 +257,8 @@ class MainWindow(QMainWindow):
         if effect.audio:
             opts['idle'] = self.idle.currentData()
         self.cfg.brightness = self.brightness.value()
+        if effect.audio and self.sink:
+            self.cfg.audio_delays[self.sink] = self.delay.value()
         self.save_timer.start()
 
     def save(self):
@@ -261,6 +286,10 @@ class MainWindow(QMainWindow):
         self.preview.set_frame(frame)
 
     def update_status(self):
+        sink = audio.default_sink()
+        if sink != self.sink:
+            self.sink = sink
+            self.load_delay()
         running = daemon.is_running()
         self.start_button.setVisible(not running)
         if running:

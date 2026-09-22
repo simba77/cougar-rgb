@@ -3,9 +3,11 @@
 При смене устройства вывода по умолчанию захват переезжает на новый выход
 (следим за событиями сервера через pactl subscribe).
 """
+import os
 import subprocess
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass
 
 import numpy as np
@@ -20,14 +22,32 @@ BEAT_AVG = HOP / RATE / 0.25                # скорость скользящ�
 BEAT_RATIO = 1.35
 BEAT_MIN_LEVEL = 0.3
 BEAT_COOLDOWN = 0.12
+MAX_DELAY = 1.0             # максимальная задержка света, с
+HISTORY = int((MAX_DELAY + 0.5) * RATE / HOP)
+
+
+def _pactl(*args):
+    try:
+        out = subprocess.run(['pactl', *args], capture_output=True, text=True, timeout=2,
+                             env=dict(os.environ, LC_ALL='C'))
+        return out.stdout
+    except (OSError, subprocess.SubprocessError):
+        return ''
 
 
 def default_sink():
-    try:
-        out = subprocess.run(['pactl', 'get-default-sink'], capture_output=True, text=True, timeout=2)
-        return out.stdout.strip() or None
-    except (OSError, subprocess.SubprocessError):
-        return None
+    return _pactl('get-default-sink').strip() or None
+
+
+def sink_description(name):
+    current = None
+    for line in _pactl('list', 'sinks').splitlines():
+        line = line.strip()
+        if line.startswith('Name:'):
+            current = line.split(':', 1)[1].strip()
+        elif line.startswith('Description:') and current == name:
+            return line.split(':', 1)[1].strip()
+    return name
 
 
 @dataclass(frozen=True)
@@ -44,6 +64,8 @@ class Features:
 class Analyzer:
     def __init__(self):
         self.features = Features()
+        self.delays = {}            # задержка света по устройствам вывода, мс
+        self._history = deque(maxlen=HISTORY)
         self._stop = threading.Event()
         self._thread = None
         self._proc = None
@@ -54,6 +76,25 @@ class Analyzer:
         freqs = np.fft.rfftfreq(WINDOW, 1 / RATE)
         self._masks = {name: (freqs >= lo) & (freqs < hi) for name, (lo, hi) in BANDS.items()}
         self._window = np.hanning(WINDOW).astype(np.float32)
+
+    @property
+    def sink(self):
+        return self._sink
+
+    @property
+    def delay(self):
+        """Задержка света для текущего устройства вывода, с."""
+        return min(self.delays.get(self._sink, 0) / 1000, MAX_DELAY)
+
+    def current(self):
+        """Признаки звука с учётом задержки света."""
+        if self.delay <= 0:
+            return self.features
+        moment = time.monotonic() - self.delay
+        for f in reversed(self._history):
+            if f.time <= moment:
+                return f
+        return Features(time=moment)
 
     @property
     def running(self):
@@ -77,7 +118,11 @@ class Analyzer:
             if thread:
                 thread.join(timeout=2)
         self._thread = self._watch_thread = None
-        self.features = Features()
+        self._set(Features())
+
+    def _set(self, features):
+        self.features = features
+        self._history.append(features)
 
     def _run(self):
         while not self._stop.is_set():
@@ -131,7 +176,7 @@ class Analyzer:
 
                 rms = float(np.sqrt(np.mean(buf[-HOP * 2:] ** 2)))
                 if rms < SILENCE_RMS:
-                    self.features = Features(beats=beats, time=now)
+                    self._set(Features(beats=beats, time=now))
                     continue
 
                 power = np.abs(np.fft.rfft(buf * self._window)) ** 2
@@ -148,8 +193,8 @@ class Analyzer:
                     last_beat = now
                 bass_avg += (bass - bass_avg) * BEAT_AVG
 
-                self.features = Features(bass=bass, mid=values['mid'], treble=values['treble'],
-                                         level=rms / peak_level, beats=beats, time=now, active=True)
+                self._set(Features(bass=bass, mid=values['mid'], treble=values['treble'],
+                                   level=rms / peak_level, beats=beats, time=now, active=True))
         finally:
             self._proc.terminate()
             self._proc.wait()

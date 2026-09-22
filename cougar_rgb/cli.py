@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import daemon
+from . import audio, daemon
 from .config import Config
 from .device import DeviceNotFound, Fusion2
 from .effects import EFFECTS, IDLE_CHOICES
@@ -48,6 +48,12 @@ def cmd_set(args):
         if not EFFECTS[cfg.effect].audio:
             sys.exit('--idle задаётся только для музыкальных эффектов')
         opts['idle'] = args.idle
+    if args.delay is not None:
+        sink = audio.default_sink()
+        if not sink:
+            sys.exit('Не удалось определить устройство вывода по умолчанию')
+        cfg.audio_delays[sink] = args.delay
+        print('Задержка света %d мс для «%s»' % (args.delay, audio.sink_description(sink)))
     if args.brightness is not None:
         cfg.brightness = args.brightness
     cfg.save()
@@ -125,6 +131,8 @@ def main():
     p.add_argument('--reverse', action=argparse.BooleanOptionalAction, default=None, help='обратное направление')
     p.add_argument('--random', action=argparse.BooleanOptionalAction, default=None, help='случайные цвета')
     p.add_argument('--idle', choices=IDLE_CHOICES, help='что показывать в тишине (для музыкальных эффектов)')
+    p.add_argument('--delay', type=int, choices=range(0, int(audio.MAX_DELAY * 1000) + 1), metavar='0-1000',
+                   help='задержка света в мс для текущего устройства вывода (Bluetooth-наушники)')
     p.set_defaults(func=cmd_set)
 
     sub.add_parser('daemon', help='фоновая служба').set_defaults(func=cmd_daemon)

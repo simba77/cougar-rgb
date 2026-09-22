@@ -22,6 +22,7 @@ class Config:
         data = data or {}
         self.effect = data.get('effect') if data.get('effect') in EFFECTS else DEFAULT_EFFECT
         self.brightness = int(data.get('brightness', 100))
+        self.audio_delays = {k: int(v) for k, v in data.get('audio_delays', {}).items()}
         self.effects = {}
         stored = data.get('effects', {})
         for name, effect in EFFECTS.items():
@@ -45,8 +46,8 @@ class Config:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix('.tmp')
         with open(tmp, 'w') as f:
-            json.dump({'effect': self.effect, 'brightness': self.brightness, 'effects': self.effects},
-                      f, indent=2, ensure_ascii=False)
+            json.dump({'effect': self.effect, 'brightness': self.brightness, 'audio_delays': self.audio_delays,
+                       'effects': self.effects}, f, indent=2, ensure_ascii=False)
         os.replace(tmp, path)
 
     def params(self, name=None):

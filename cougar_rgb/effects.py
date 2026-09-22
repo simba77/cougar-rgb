@@ -264,7 +264,7 @@ class AudioEffect(Effect):
     @staticmethod
     def _features(t):
         if audio.analyzer.running:
-            return audio.analyzer.features
+            return audio.analyzer.current()
         x = t % 0.5
         return audio.Features(bass=math.exp(-x * 8), mid=0.5 + 0.5 * math.sin(t * 0.7),
                               treble=0.5 - 0.5 * math.sin(t * 0.7), level=0.4 + 0.5 * math.exp(-x * 4),

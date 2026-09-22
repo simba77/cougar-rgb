@@ -73,7 +73,7 @@ class Daemon:
 
     def apply_config(self):
         cfg = Config.load()
-        self.engine.apply(cfg.effect, cfg.params())
+        self.engine.apply(cfg.effect, cfg.params(), cfg.audio_delays)
         log.info('applied %s, brightness %d%%', cfg.effect, cfg.brightness)
 
     def step(self):

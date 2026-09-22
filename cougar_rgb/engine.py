@@ -30,13 +30,14 @@ class Engine:
                 self.dev.set_effect(zone, 1)
         self.dev.apply()
 
-    def apply(self, effect_name, params):
+    def apply(self, effect_name, params, audio_delays=None):
         effect = EFFECTS[effect_name]
         self.effect, self.params = effect, params
         self.started = self.last_tick = time.monotonic()
         self.last_frame = None
         self.last_sound = float('-inf')
         self.idle_k = 1.0
+        audio.analyzer.delays = dict(audio_delays or {})
         if effect.audio:
             audio.analyzer.start()
         else:
@@ -73,8 +74,8 @@ class Engine:
 
     def _blend_idle(self, frame, t, now, dt):
         """Плавно подменяет музыкальный эффект эффектом для тишины, когда ничего не играет."""
-        f = audio.analyzer.features
-        if f.active and now - f.time < STALE_AUDIO:
+        f = audio.analyzer.current()
+        if f.active and now - audio.analyzer.delay - f.time < STALE_AUDIO:
             self.last_sound = now
         target = 1.0 if now - self.last_sound > IDLE_DELAY else 0.0
         step = dt / (IDLE_FADE_IN if target > self.idle_k else IDLE_FADE_OUT)
