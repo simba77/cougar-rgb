@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QColorDialog, QComboBox,
                                QVBoxLayout, QWidget)
 
 from . import audio, daemon
-from .cli import ROOT, SERVICE_PATH
+from .cli import SERVICE_PATH, _launch_env
 from .config import Config
 from .device import LED_COUNT, Fusion2
 from .effects import EFFECTS, IDLE_CHOICES, IDLE_NONE, apply_brightness
@@ -307,7 +307,7 @@ class MainWindow(QMainWindow):
         if SERVICE_PATH.exists():
             subprocess.run(['systemctl', '--user', 'start', 'cougar-rgb.service'])
         else:
-            env = dict(os.environ, PYTHONPATH=str(ROOT))
+            env = dict(os.environ, **_launch_env())
             subprocess.Popen([sys.executable, '-m', 'cougar_rgb', 'daemon'], env=env, start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         QTimer.singleShot(700, self.update_status)

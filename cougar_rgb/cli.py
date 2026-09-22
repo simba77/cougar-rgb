@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import audio, daemon
+from . import __version__, audio, daemon
 from .config import Config
 from .device import DeviceNotFound, Fusion2
 from .effects import EFFECTS, IDLE_CHOICES
@@ -75,20 +75,29 @@ def cmd_daemon(args):
 
 
 def cmd_gui(args):
-    from .gui import main
+    try:
+        from .gui import main
+    except ImportError as e:
+        sys.exit('Для GUI нужен PySide6 (pip install "cougar-rgb[gui]"): %s' % e)
     main()
+
+
+def _launch_env():
+    """PYTHONPATH нужен только при запуске из исходников, а не из установленного пакета."""
+    return {'PYTHONPATH': str(ROOT)} if (ROOT / 'pyproject.toml').exists() else {}
 
 
 def cmd_install(args):
     python = sys.executable
+    env = ''.join('Environment=%s=%s\n' % item for item in _launch_env().items())
+    env_prefix = ''.join('env %s=%s ' % item for item in _launch_env().items())
     SERVICE_PATH.parent.mkdir(parents=True, exist_ok=True)
     SERVICE_PATH.write_text(f"""[Unit]
 Description=Cougar case ARGB lighting (Gigabyte RGB Fusion 2)
 After=graphical-session.target
 
 [Service]
-Environment=PYTHONPATH={ROOT}
-ExecStart={python} -m cougar_rgb daemon
+{env}ExecStart={python} -m cougar_rgb daemon
 Restart=on-failure
 RestartSec=3
 
@@ -100,7 +109,7 @@ WantedBy=default.target
 Type=Application
 Name=Cougar RGB
 Comment=Подсветка корпуса
-Exec=env PYTHONPATH={ROOT} {python} -m cougar_rgb gui
+Exec={env_prefix}{python} -m cougar_rgb gui
 Icon=preferences-desktop-color
 Categories=Settings;HardwareSettings;
 """)
@@ -118,6 +127,7 @@ def cmd_uninstall(args):
 
 def main():
     parser = argparse.ArgumentParser(prog='cougar-rgb', description='Подсветка корпуса через RGB Fusion 2')
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
     sub = parser.add_subparsers(dest='command', required=True)
 
     sub.add_parser('list', help='список эффектов').set_defaults(func=cmd_list)
