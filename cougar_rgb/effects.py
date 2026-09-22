@@ -74,11 +74,6 @@ def _hw_speed(p):
     return 10 - max(1, min(10, p.speed))
 
 
-def _color_int(rgb):
-    r, g, b = (int(c) for c in rgb)
-    return (r << 16) | (g << 8) | b
-
-
 def _rate(p, slow, fast):
     """Плавная шкала скорости: speed=1 → slow, speed=10 → fast (геометрически)."""
     k = (max(1, min(10, p.speed)) - 1) / 9
@@ -93,7 +88,7 @@ def _hw_brightness(p):
 
 class HwOff(Effect):
     def hw_packet(self, p):
-        return dict(effect_type=HW_STATIC, color=0)
+        return dict(effect_type=HW_STATIC)
 
     def render(self, t, p):
         return [(0, 0, 0)] * LED_COUNT
@@ -101,7 +96,7 @@ class HwOff(Effect):
 
 class HwStatic(Effect):
     def hw_packet(self, p):
-        return dict(effect_type=HW_STATIC, color=_color_int(p.rgb(0)), max_brightness=_hw_brightness(p))
+        return dict(effect_type=HW_STATIC, color=p.rgb(0), max_brightness=_hw_brightness(p))
 
     def render(self, t, p):
         return [p.rgb(0)] * LED_COUNT
@@ -114,7 +109,7 @@ class HwPulse(Effect):
 
     def hw_packet(self, p):
         period = self._period(p)
-        return dict(effect_type=HW_PULSE, color=_color_int(p.rgb(0)), max_brightness=_hw_brightness(p),
+        return dict(effect_type=HW_PULSE, color=p.rgb(0), max_brightness=_hw_brightness(p),
                     periods=(period, period, 200, 0), params=(7 if p.random else 0, 0, 0, 0))
 
     def render(self, t, p):
@@ -131,7 +126,7 @@ class HwFlash(Effect):
 
     def hw_packet(self, p):
         params = (7 if p.random else 0, 1, 2, 0) if self.count == 2 else (7 if p.random else 0, 0, 0, 0)
-        return dict(effect_type=HW_FLASH, color=_color_int(p.rgb(0)), max_brightness=_hw_brightness(p),
+        return dict(effect_type=HW_FLASH, color=p.rgb(0), max_brightness=_hw_brightness(p),
                     periods=(100, 100, _hw_speed(p) * 200 + 700, 0), params=params)
 
     def render(self, t, p):

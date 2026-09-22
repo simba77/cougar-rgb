@@ -1,9 +1,9 @@
 """Низкоуровневый протокол Gigabyte RGB Fusion 2 USB (ITE 048d:5702, прошивка IT5701).
 
 Все команды — HID feature-репорты 0xCC длиной 64 байта.
-Раскладка разъёмов проверена вручную на Z790 GAMING X AX и отличается от OpenRGB:
-корпус висит на разъёме, эффекты которого задаются через зону 3,
-а попиксельные данные — через регистр 0x58 и бит 0x01 команды 0x32.
+Корпус висит на разъёме D_LED1 (Z790 GAMING X AX): эффекты — зона 5,
+попиксельные данные — регистр 0x58 и бит 0x01 команды 0x32.
+Прошивка не переставляет байты цвета, лента ждёт их в порядке GRB — и в эффектах, и в кадрах.
 """
 import fcntl
 import glob
@@ -14,7 +14,7 @@ VID, PID = 0x048D, 0x5702
 REPORT_ID = 0xCC
 PACKET_SIZE = 64
 
-EFFECT_ZONE = 3          # зона встроенных эффектов для ARGB-разъёма корпуса
+EFFECT_ZONE = 5          # зона встроенных эффектов для D_LED1
 DIRECT_BIT = 0x01        # бит команды 0x32: разъём в попиксельном режиме
 DIRECT_REG = 0x58        # регистр попиксельных данных
 LED_COUNT = 8            # светодиодов на вентилятор (хаб дублирует их на все вентиляторы)
@@ -26,6 +26,11 @@ CMD_BEAT = 0x31
 CMD_DIRECT = 0x32
 CMD_LED_COUNT = 0x34
 CMD_INFO = 0x60
+
+
+def _grb(rgb):
+    r, g, b = (int(c) for c in rgb)
+    return bytes((g, r, b))
 
 
 class DeviceNotFound(OSError):
@@ -95,16 +100,16 @@ class Fusion2:
     def set_direct(self, enabled):
         self.command(CMD_DIRECT, DIRECT_BIT if enabled else 0)
 
-    def set_effect(self, zone, effect_type, color=0, max_brightness=255, min_brightness=0,
-                   color1=0, periods=(0, 0, 0, 0), params=(0, 0, 0, 0)):
-        """color — 0xRRGGBB; periods — миллисекунды (нарастание, затухание, удержание, ...)."""
+    def set_effect(self, zone, effect_type, color=(0, 0, 0), max_brightness=255, min_brightness=0,
+                   color1=(0, 0, 0), periods=(0, 0, 0, 0), params=(0, 0, 0, 0)):
+        """color — (r, g, b); periods — миллисекунды (нарастание, затухание, удержание, ...)."""
         buf = bytearray(PACKET_SIZE)
         buf[1] = CMD_EFFECT + zone
         struct.pack_into('<II', buf, 2, 1 << zone, 0)
         buf[11] = effect_type
         buf[12] = max_brightness
         buf[13] = min_brightness
-        struct.pack_into('<II4H4B', buf, 14, color, color1, *periods, *params)
+        struct.pack_into('<3sx3sx4H4B', buf, 14, _grb(color), _grb(color1), *periods, *params)
         self.send(buf)
 
     def apply(self):
@@ -119,6 +124,6 @@ class Fusion2:
             buf[1] = DIRECT_REG
             struct.pack_into('<HB', buf, 2, offset, len(chunk) * 3)
             for i, (r, g, b) in enumerate(chunk):
-                buf[5 + i * 3:8 + i * 3] = bytes((g, r, b))    # GRB
+                buf[5 + i * 3:8 + i * 3] = _grb((r, g, b))
             self.send(buf)
             offset += len(chunk) * 3

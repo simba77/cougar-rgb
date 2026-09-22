@@ -20,7 +20,7 @@ class Engine:
         self.dev.init()
         for zone in ALL_ZONES:
             if zone != EFFECT_ZONE:
-                self.dev.set_effect(zone, 1, 0)
+                self.dev.set_effect(zone, 1)
         self.dev.apply()
 
     def apply(self, effect_name, params):
