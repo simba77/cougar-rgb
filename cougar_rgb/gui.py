@@ -63,10 +63,11 @@ class ColorButton(QPushButton):
 
     def set_color(self, color):
         self.color = color
-        self.setStyleSheet('background:%s; border:1px solid #888; border-radius:4px;' % color)
+        self.setStyleSheet('QPushButton { background:%s; border:1px solid #888; border-radius:4px; }' % color)
 
     def pick(self):
-        color = QColorDialog.getColor(QColor(self.color), self, 'Цвет')
+        # родитель — окно, а не кнопка, иначе диалог унаследует её фон
+        color = QColorDialog.getColor(QColor(self.color), self.window(), 'Цвет')
         if color.isValid():
             self.set_color(color.name())
             self.on_change()
