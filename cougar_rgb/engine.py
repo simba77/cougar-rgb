@@ -1,13 +1,12 @@
 """Применение эффекта к контроллеру."""
 import time
 
+from . import audio
 from .device import ALL_ZONES, EFFECT_ZONE, Fusion2
 from .effects import EFFECTS, apply_brightness
 
 
 class Engine:
-    FPS = 30
-
     def __init__(self, dev: Fusion2):
         self.dev = dev
         self.effect = None
@@ -28,6 +27,10 @@ class Engine:
         self.effect, self.params = effect, params
         self.started = time.monotonic()
         self.last_frame = None
+        if effect.audio:
+            audio.analyzer.start()
+        else:
+            audio.analyzer.stop()
         if effect.kind == 'hw':
             self.dev.set_direct(False)
             self.dev.set_effect(EFFECT_ZONE, **effect.hw_packet(params))
@@ -35,6 +38,10 @@ class Engine:
         else:
             self.dev.set_direct(True)
             self.tick()
+
+    @property
+    def fps(self):
+        return self.effect.fps if self.effect else 30
 
     @property
     def animated(self):

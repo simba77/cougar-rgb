@@ -198,6 +198,7 @@ class MainWindow(QMainWindow):
         self.speed.setValue(opts['speed'])
         self.speed_row.setVisible(effect.has_speed)
         self.speed_label.setVisible(effect.has_speed)
+        self.speed_label.setText(effect.speed_title)
         self.reverse.setChecked(opts['reverse'])
         self.reverse.setVisible(effect.has_direction)
         self.random.setChecked(opts['random'])

@@ -9,6 +9,7 @@ import math
 import random
 from dataclasses import dataclass, field
 
+from . import audio
 from .device import LED_COUNT
 
 HW_STATIC, HW_PULSE, HW_FLASH, HW_CYCLE = 1, 2, 3, 4
@@ -57,6 +58,9 @@ class Effect:
     has_speed: bool = True
     has_random: bool = False
     has_direction: bool = False
+    speed_title: str = 'Скорость'
+    audio: bool = False              # нужен анализ звука (запускается только службой)
+    fps: int = 30
 
     # --- аппаратные ---
     def hw_packet(self, p):
@@ -236,6 +240,72 @@ class SwRandom(Effect):
         return frame
 
 
+class AudioEffect(Effect):
+    """Эффект под музыку. Без анализатора (в предпросмотре GUI) имитирует ритм 120 BPM."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, audio=True, fps=60, **kwargs)
+        self._t = 0.0
+        self.reset()
+
+    def _step(self, t):
+        dt = t - self._t
+        self._t = t
+        if not 0 <= dt < 0.2:
+            self.reset()
+            dt = 0.0
+        return dt
+
+    def reset(self):
+        pass
+
+    @staticmethod
+    def _features(t):
+        if audio.analyzer.running:
+            return audio.analyzer.features
+        x = t % 0.5
+        return audio.Features(bass=math.exp(-x * 8), mid=0.5 + 0.5 * math.sin(t * 0.7),
+                              treble=0.5 - 0.5 * math.sin(t * 0.7), level=0.4 + 0.5 * math.exp(-x * 4),
+                              beats=int(t * 2))
+
+
+class SwBassPulse(AudioEffect):
+    """Вспышка на ударе баса с затуханием; между ударами подсветка дышит уровнем баса."""
+
+    def reset(self):
+        self.env, self.beats, self.n = 0.0, None, 0
+
+    def render(self, t, p):
+        dt = self._step(t)
+        f = self._features(t)
+        release = 1 / _rate(p, 1 / 0.9, 1 / 0.12)
+        self.env *= math.exp(-dt / release)
+        if f.beats != self.beats:
+            if self.beats is not None:
+                self.env, self.n = 1.0, self.n + 1
+            self.beats = f.beats
+        self.env = max(self.env, f.bass ** 2 * 0.6)
+        color = hsv(random.Random(self.n).random()) if p.random else p.rgb(0)
+        return [scale(color, self.env)] * LED_COUNT
+
+
+class SwSpectrumColor(AudioEffect):
+    """Оттенок по балансу частот: бас — красный, середина — зелёный/голубой, верх — фиолетовый."""
+
+    def reset(self):
+        self.hue, self.level = 0.0, 0.0
+
+    def render(self, t, p):
+        dt = self._step(t)
+        f = self._features(t)
+        total = f.bass + f.mid + f.treble
+        if total > 1e-3:
+            target = 0.75 * (0.5 * f.mid + f.treble) / total
+            self.hue += (target - self.hue) * (1 - math.exp(-dt / (1 / _rate(p, 1 / 0.6, 1 / 0.05))))
+        self.level = max(f.level, self.level * math.exp(-dt / 0.25))
+        return [hsv(self.hue, 1.0, self.level ** 1.5)] * LED_COUNT
+
+
 class SwCustom(Effect):
     def render(self, t, p):
         return [p.rgb(i) for i in range(LED_COUNT)]
@@ -258,6 +328,9 @@ EFFECTS = {e.name: e for e in [
                default_colors=['#ff00c0', '#0060ff'], has_direction=True),
     SwFire('sw_fire', 'Пламя', 'sw', colors=1, default_colors=['#ff6000']),
     SwRandom('sw_random', 'Случайные цвета', 'sw'),
+    SwBassPulse('sw_bass_pulse', 'Пульс по басу', 'sw', colors=1, default_colors=['#ff0030'],
+                has_random=True, speed_title='Затухание'),
+    SwSpectrumColor('sw_spectrum_color', 'Цвет по спектру', 'sw', speed_title='Реакция'),
     SwCustom('sw_custom', 'Свои цвета по диодам', 'sw', colors=LED_COUNT, has_speed=False,
              default_colors=[to_hex(hsv(i / LED_COUNT)) for i in range(LED_COUNT)]),
 ]}

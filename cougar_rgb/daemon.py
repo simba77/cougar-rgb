@@ -6,6 +6,7 @@ import signal
 import time
 from pathlib import Path
 
+from . import audio
 from .config import CONFIG_PATH, Config
 from .device import DeviceNotFound, Fusion2
 from .engine import Engine
@@ -96,7 +97,7 @@ class Daemon:
         now = time.monotonic()
         if self.engine.animated:
             self.engine.tick()
-            time.sleep(1 / Engine.FPS)
+            time.sleep(1 / self.engine.fps)
         else:
             if now - self.last_health > HEALTH_INTERVAL:
                 self.last_health = now
@@ -114,6 +115,7 @@ class Daemon:
                 self.disconnect()
                 time.sleep(RECONNECT_DELAY)
         self.disconnect()
+        audio.analyzer.stop()
 
 
 def main():
