@@ -42,3 +42,4 @@ ignore = ["UP031"]   # проект сознательно использует 
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
