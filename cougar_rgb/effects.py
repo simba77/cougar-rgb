@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from .device import LED_COUNT
 
-HW_STATIC, HW_PULSE, HW_FLASH, HW_CYCLE, HW_WAVE, HW_RANDOM = 1, 2, 3, 4, 6, 8
+HW_STATIC, HW_PULSE, HW_FLASH, HW_CYCLE = 1, 2, 3, 4
 
 
 def parse_color(value):
@@ -156,30 +156,6 @@ class HwCycle(Effect):
         return [hsv(t / step / 7)] * LED_COUNT
 
 
-class HwWave(Effect):
-    def _period(self, p):
-        s = _hw_speed(p)
-        return ((s + 1) ** 2 + (s + 1) + 10) * 5 // 2
-
-    def hw_packet(self, p):
-        return dict(effect_type=HW_WAVE, max_brightness=_hw_brightness(p),
-                    periods=(self._period(p), 0, 0, 0), params=(7, 1, 0, 0))
-
-    def render(self, t, p):
-        shift = t * 1000 / self._period(p) / 40
-        return [hsv(i / LED_COUNT - shift) for i in range(LED_COUNT)]
-
-
-class HwRandom(Effect):
-    def hw_packet(self, p):
-        return dict(effect_type=HW_RANDOM, max_brightness=_hw_brightness(p),
-                    periods=(100, 0, 0, 0), params=(1, 5, 0, 0))
-
-    def render(self, t, p):
-        rnd = random.Random(int(t * 4))
-        return [hsv(rnd.random()) for _ in range(LED_COUNT)]
-
-
 # ---------------------------------------------------------------- программные
 
 def _direction(p):
@@ -240,6 +216,26 @@ class SwFire(Effect):
         return frame
 
 
+class SwRandom(Effect):
+    """Каждый диод независимо и плавно переходит в новый случайный цвет."""
+    fade = 0.4      # доля периода на переход
+
+    @staticmethod
+    def _color(i, n):
+        return hsv(random.Random(i * 100003 + n).random())
+
+    def render(self, t, p):
+        period = 1 / _rate(p, 1 / 6, 1 / 0.4)
+        frame = []
+        for i in range(LED_COUNT):
+            phase = random.Random(i).random() * period      # диоды меняются не одновременно
+            n, x = divmod(t + phase, period)
+            n = int(n)
+            k = max(0.0, (x / period - (1 - self.fade)) / self.fade)
+            frame.append(mix(self._color(i, n), self._color(i, n + 1), k))
+        return frame
+
+
 class SwCustom(Effect):
     def render(self, t, p):
         return [p.rgb(i) for i in range(LED_COUNT)]
@@ -251,8 +247,6 @@ EFFECTS = {e.name: e for e in [
     HwFlash('flash', 'Вспышки', 'hw', colors=1, default_colors=['#ff0000'], has_random=True),
     HwDoubleFlash('double_flash', 'Двойные вспышки', 'hw', colors=1, default_colors=['#ff0000'], has_random=True),
     HwCycle('color_cycle', 'Смена цветов', 'hw'),
-    HwWave('wave', 'Радужная волна', 'hw'),
-    HwRandom('random', 'Случайные цвета', 'hw', has_speed=False),
     HwOff('off', 'Выключено', 'hw', has_speed=False),
 
     SwRainbow('sw_rainbow', 'Вращающаяся радуга', 'sw', has_direction=True),
@@ -263,6 +257,7 @@ EFFECTS = {e.name: e for e in [
     SwGradient('sw_gradient', 'Вращающийся градиент', 'sw', colors=2,
                default_colors=['#ff00c0', '#0060ff'], has_direction=True),
     SwFire('sw_fire', 'Пламя', 'sw', colors=1, default_colors=['#ff6000']),
+    SwRandom('sw_random', 'Случайные цвета', 'sw'),
     SwCustom('sw_custom', 'Свои цвета по диодам', 'sw', colors=LED_COUNT, has_speed=False,
              default_colors=[to_hex(hsv(i / LED_COUNT)) for i in range(LED_COUNT)]),
 ]}
