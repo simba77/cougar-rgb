@@ -10,6 +10,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
+option(COUGAR_BUILD_GUI "Build the Qt GUI" ON)
 option(COUGAR_BUILD_TESTS "Build unit tests" ON)
 
 find_package(PkgConfig REQUIRED)
@@ -42,6 +43,19 @@ add_executable(cougar-rgb
     src/cli/install.cpp
 )
 target_link_libraries(cougar-rgb PRIVATE cougar_core PkgConfig::SYSTEMD)
+
+if(COUGAR_BUILD_GUI)
+    find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
+    qt_standard_project_setup()
+    qt_add_executable(cougar-rgb-gui
+        src/gui/main.cpp
+        src/gui/main_window.cpp
+        src/gui/main_window.hpp
+        src/gui/fan_preview.cpp
+        src/gui/fan_preview.hpp
+    )
+    target_link_libraries(cougar-rgb-gui PRIVATE cougar_core Qt6::Widgets)
+endif()
 
 if(COUGAR_BUILD_TESTS)
     find_package(Catch2 3 REQUIRED)
