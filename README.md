@@ -26,9 +26,12 @@ per-LED software effects the firmware does not have.
   spectrum color. Capture follows the default output when you switch devices, falls back to a
   chosen idle effect during silence, and supports a per-output light delay for Bluetooth
   headphones.
-- **Daemon** (systemd user service) that applies the saved config on login, reapplies it after
-  suspend or USB reconnects, and picks up config changes live.
-- **GUI** (PySide6) with a live fan preview, and a **CLI** for scripting.
+- **Daemon** (systemd user service) that applies the saved config on login, reinitializes the
+  controller after suspend (logind `PrepareForSleep`) or USB reconnects, and picks up config
+  changes live. It is a single native process: about 9 MB of RAM and ~1.5 % of one core while a
+  music effect is running.
+- **Native Qt 6 GUI** with a live fan preview that follows your desktop theme, and a **CLI** for
+  scripting.
 
 ## Hardware
 
@@ -40,7 +43,7 @@ Tested on:
 | Controller | ITE `048d:5702`, firmware `IT5701-GIGABYTE V3.5.5.0` |
 | Case | Cougar Duoface Pro RGB (CGR-5AD1B-RGB), hub in motherboard sync mode |
 
-What the code assumes about the setup (see `cougar_rgb/device.py` to adapt it):
+What the code assumes about the setup (see `src/core/device.hpp` to adapt it):
 
 - the lighting is on `D_LED1`: builtin effects use zone 5, per-LED data goes to register `0x58`,
   direct mode is bit `0x01` of command `0x32`;
@@ -51,38 +54,56 @@ The rest of the controller's zones are switched off when the daemon connects.
 
 ## Installation
 
-Requirements: Linux, Python 3.10+, `numpy`; `PySide6` for the GUI; PipeWire or PulseAudio
-with `pactl` and `parec` for the music effects.
+Prebuilt packages are attached to each [release](https://github.com/simba77/cougar-rgb/releases).
+They are built on Ubuntu 24.04 and need glibc 2.39+, `libsystemd`, `libpulse` (provided by
+PipeWire or PulseAudio) and, for the GUI, Qt 6.4+.
 
-1. Allow your user to access the controller without root:
+### Debian, Ubuntu, KDE neon
 
-   ```sh
-   sudo cp packaging/60-rgb-fusion2.rules /etc/udev/rules.d/
-   sudo udevadm control --reload && sudo udevadm trigger
-   ```
+```sh
+sudo apt install ./cougar-rgb_*_amd64.deb
+systemctl --user start cougar-rgb
+```
 
-2. Install the app, for example with pipx:
+The package installs the udev rule, the systemd user service (enabled for every user) and the
+menu entry.
 
-   ```sh
-   pipx install "cougar-rgb[gui] @ git+https://github.com/simba77/cougar-rgb"
-   ```
+### Other distributions
 
-   Or run it straight from a checkout: `./cougar-rgb <command>`. It uses the system Python,
-   so `numpy` (and `PySide6` for the GUI) must be available to it, from your distribution's
-   packages or pip.
+Extract the `.tar.gz` and install the udev rule so your user can access the controller:
 
-3. Install and start the daemon (systemd user service) and a desktop entry:
+```sh
+tar xzf cougar-rgb-*-linux-x86_64.tar.gz
+cd cougar-rgb-*-linux-x86_64
+sudo cp usr/lib/udev/rules.d/60-rgb-fusion2.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger
+usr/bin/cougar-rgb install      # systemd user service + menu entry pointing at these binaries
+```
 
-   ```sh
-   cougar-rgb install
-   ```
+`cougar-rgb uninstall` removes the service and the menu entry.
 
-   `cougar-rgb uninstall` removes both.
+### From source
+
+Dependencies on Debian/Ubuntu:
+
+```sh
+sudo apt install cmake ninja-build pkg-config qt6-base-dev libsystemd-dev libpulse-dev \
+    nlohmann-json3-dev catch2
+```
+
+```sh
+cmake -S . -B build -G Ninja
+cmake --build build
+ctest --test-dir build
+sudo cmake --install build          # or: cd build && cpack  → .deb and .tar.gz
+```
+
+Pass `-DCOUGAR_BUILD_GUI=OFF` to build only the CLI and daemon, without Qt.
 
 ## Usage
 
 ```sh
-cougar-rgb gui                                   # graphical settings
+cougar-rgb gui                                   # graphical settings (same as cougar-rgb-gui)
 cougar-rgb list                                  # available effects
 cougar-rgb info                                  # controller and daemon status
 cougar-rgb set static -c ff0040 -b 80            # hardware static color at 80 %
@@ -96,14 +117,16 @@ daemon are applied directly; software and music effects need the daemon.
 
 ## Development
 
-```sh
-pip install -e ".[dev,gui]"
-ruff check .
-pytest
-```
+The code is C++20: `src/core` holds the protocol, effects, config, audio analysis and engine
+without any Qt dependency, `src/cli` the `cougar-rgb` CLI and daemon, `src/gui` the Qt Widgets
+GUI. The tests (Catch2) check protocol packets byte-for-byte through a fake transport and feed
+synthetic signals to the audio analyzer, so they need neither the controller nor an audio
+server.
 
-The tests check protocol packets byte-for-byte through a patched `ioctl`, so they need
-neither the controller nor an audio server.
+`COUGAR_RGB_SCREENSHOT=out.png cougar-rgb-gui` renders the window to a file and exits; with
+`QT_QPA_PLATFORM=offscreen` this works without a display.
+
+Versions up to 0.1.x were written in Python; see the `v0.1.1` tag.
 
 ## Credits
 
