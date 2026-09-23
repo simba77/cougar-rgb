@@ -35,14 +35,14 @@ enum class Kind { Hardware, Software };
 
 struct EffectInfo {
     std::string name;
-    std::string title;
+    std::string title;                      // English; shown through tr()
     Kind kind = Kind::Software;
     int colors = 0;                         // number of configurable colors
     std::vector<std::string> default_colors;
     bool has_speed = true;
     bool has_random = false;
     bool has_direction = false;
-    std::string speed_title = "Скорость";
+    std::string speed_title = "Speed";
     bool audio = false;                     // needs audio analysis (started by the daemon only)
     int fps = 30;
 };

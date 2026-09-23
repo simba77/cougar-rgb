@@ -45,6 +45,10 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(QWidget *parent = nullptr);
 
+signals:
+    // The window has to be rebuilt to show the new language.
+    void languageChanged();
+
 private:
     QSlider *makeSlider(int lo, int hi);
     QWidget *withValue(QSlider *slider, QLabel *label);
@@ -75,7 +79,7 @@ private:
     QLabel *brightnessValue_, *speedValue_, *speedLabel_, *delayValue_, *delayLabel_, *delayHint_, *idleLabel_;
     QWidget *speedRow_, *delayRow_;
     QCheckBox *reverse_, *random_;
-    QComboBox *idle_;
+    QComboBox *idle_, *language_;
     QLabel *status_;
     QPushButton *startButton_;
     QTimer *saveTimer_;

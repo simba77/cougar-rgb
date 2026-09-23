@@ -346,37 +346,37 @@ std::vector<std::unique_ptr<Effect>> make_effects()
     using K = Kind;
     std::vector<std::unique_ptr<Effect>> list;
     auto add = [&](auto effect) { list.push_back(std::move(effect)); };
-    add(std::make_unique<HwStatic>(EffectInfo{.name = "static", .title = "Статичный цвет", .kind = K::Hardware,
+    add(std::make_unique<HwStatic>(EffectInfo{.name = "static", .title = "Static color", .kind = K::Hardware,
                                               .colors = 1, .default_colors = {"#ffffff"}, .has_speed = false}));
-    add(std::make_unique<HwPulse>(EffectInfo{.name = "breathing", .title = "Дыхание", .kind = K::Hardware,
+    add(std::make_unique<HwPulse>(EffectInfo{.name = "breathing", .title = "Breathing", .kind = K::Hardware,
                                              .colors = 1, .default_colors = {"#00a0ff"}, .has_random = true}));
-    add(std::make_unique<HwFlash>(EffectInfo{.name = "flash", .title = "Вспышки", .kind = K::Hardware, .colors = 1,
+    add(std::make_unique<HwFlash>(EffectInfo{.name = "flash", .title = "Flash", .kind = K::Hardware, .colors = 1,
                                              .default_colors = {"#ff0000"}, .has_random = true}, 1));
-    add(std::make_unique<HwFlash>(EffectInfo{.name = "double_flash", .title = "Двойные вспышки", .kind = K::Hardware,
+    add(std::make_unique<HwFlash>(EffectInfo{.name = "double_flash", .title = "Double flash", .kind = K::Hardware,
                                              .colors = 1, .default_colors = {"#ff0000"}, .has_random = true}, 2));
-    add(std::make_unique<HwCycle>(EffectInfo{.name = "color_cycle", .title = "Смена цветов", .kind = K::Hardware}));
-    add(std::make_unique<HwOff>(EffectInfo{.name = "off", .title = "Выключено", .kind = K::Hardware,
+    add(std::make_unique<HwCycle>(EffectInfo{.name = "color_cycle", .title = "Color cycle", .kind = K::Hardware}));
+    add(std::make_unique<HwOff>(EffectInfo{.name = "off", .title = "Off", .kind = K::Hardware,
                                            .has_speed = false}));
 
-    add(std::make_unique<SwRainbow>(EffectInfo{.name = "sw_rainbow", .title = "Вращающаяся радуга",
+    add(std::make_unique<SwRainbow>(EffectInfo{.name = "sw_rainbow", .title = "Rotating rainbow",
                                                .has_direction = true}));
-    add(std::make_unique<SwSpectrum>(EffectInfo{.name = "sw_spectrum", .title = "Плавный спектр"}));
-    add(std::make_unique<SwBreathing>(EffectInfo{.name = "sw_breathing", .title = "Плавное дыхание", .colors = 3,
+    add(std::make_unique<SwSpectrum>(EffectInfo{.name = "sw_spectrum", .title = "Smooth spectrum"}));
+    add(std::make_unique<SwBreathing>(EffectInfo{.name = "sw_breathing", .title = "Smooth breathing", .colors = 3,
                                                  .default_colors = {"#ff0040", "#00a0ff", "#40ff00"},
                                                  .has_random = true}));
-    add(std::make_unique<SwComet>(EffectInfo{.name = "sw_comet", .title = "Комета", .colors = 2,
+    add(std::make_unique<SwComet>(EffectInfo{.name = "sw_comet", .title = "Comet", .colors = 2,
                                              .default_colors = {"#00ffff", "#000010"}, .has_direction = true}));
-    add(std::make_unique<SwGradient>(EffectInfo{.name = "sw_gradient", .title = "Вращающийся градиент", .colors = 2,
+    add(std::make_unique<SwGradient>(EffectInfo{.name = "sw_gradient", .title = "Rotating gradient", .colors = 2,
                                                 .default_colors = {"#ff00c0", "#0060ff"}, .has_direction = true}));
-    add(std::make_unique<SwFire>(EffectInfo{.name = "sw_fire", .title = "Пламя", .colors = 1,
+    add(std::make_unique<SwFire>(EffectInfo{.name = "sw_fire", .title = "Fire", .colors = 1,
                                             .default_colors = {"#ff6000"}}));
-    add(std::make_unique<SwRandom>(EffectInfo{.name = "sw_random", .title = "Случайные цвета"}));
-    add(std::make_unique<SwBassPulse>(EffectInfo{.name = "sw_bass_pulse", .title = "Пульс по басу", .colors = 1,
+    add(std::make_unique<SwRandom>(EffectInfo{.name = "sw_random", .title = "Random colors"}));
+    add(std::make_unique<SwBassPulse>(EffectInfo{.name = "sw_bass_pulse", .title = "Bass pulse", .colors = 1,
                                                  .default_colors = {"#ff0030"}, .has_random = true,
-                                                 .speed_title = "Затухание"}));
-    add(std::make_unique<SwSpectrumColor>(EffectInfo{.name = "sw_spectrum_color", .title = "Цвет по спектру",
-                                                     .speed_title = "Реакция"}));
-    add(std::make_unique<SwCustom>(EffectInfo{.name = "sw_custom", .title = "Свои цвета по диодам",
+                                                 .speed_title = "Decay"}));
+    add(std::make_unique<SwSpectrumColor>(EffectInfo{.name = "sw_spectrum_color", .title = "Spectrum color",
+                                                     .speed_title = "Response"}));
+    add(std::make_unique<SwCustom>(EffectInfo{.name = "sw_custom", .title = "Custom color per LED",
                                               .colors = LED_COUNT, .default_colors = rainbow_colors(),
                                               .has_speed = false}));
     return list;

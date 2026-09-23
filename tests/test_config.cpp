@@ -24,6 +24,7 @@ TEST_CASE("save and load roundtrip")
     cfg.effect = "sw_comet";
     cfg.brightness = 42;
     cfg.audio_delays = {{"bt_sink", 250}};
+    cfg.language = "en";
     cfg.options("sw_comet").colors = {"#010203", "#040506"};
     cfg.save(path);
 
@@ -31,6 +32,7 @@ TEST_CASE("save and load roundtrip")
     CHECK(loaded.effect == "sw_comet");
     CHECK(loaded.brightness == 42);
     CHECK(loaded.audio_delays == std::map<std::string, int>{{"bt_sink", 250}});
+    CHECK(loaded.language == "en");
     CHECK(loaded.effects.at("sw_comet").colors == std::vector<std::string>{"#010203", "#040506"});
     std::filesystem::remove_all(path.parent_path().parent_path());
 }
@@ -49,11 +51,12 @@ TEST_CASE("reads the Python version's config format")
 
 TEST_CASE("invalid values fall back to defaults")
 {
-    const Config cfg = Config::parse(R"({"effect": "removed_effect", "brightness": "loud",
+    const Config cfg = Config::parse(R"({"effect": "removed_effect", "brightness": "loud", "language": "klingon",
         "effects": {"sw_bass_pulse": {"idle": "removed_effect", "bogus": 1, "speed": "fast"},
                     "sw_comet": {"colors": ["#ffffff"]}}})");
     CHECK(find_effect(cfg.effect));
     CHECK(cfg.brightness == 100);
+    CHECK(cfg.language == "system");
     CHECK(cfg.effects.at("sw_bass_pulse").idle == std::string(IDLE_DEFAULT));
     CHECK(cfg.effects.at("sw_bass_pulse").speed == 5);
     CHECK(cfg.effects.at("sw_comet").colors.size() == 2);    // missing color filled in

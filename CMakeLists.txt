@@ -36,6 +36,7 @@ add_library(cougar_core STATIC
     src/core/device.cpp
     src/core/effects.cpp
     src/core/engine.cpp
+    src/core/i18n.cpp
     src/core/paths.cpp
     src/core/sink.cpp
 )
@@ -74,6 +75,7 @@ if(COUGAR_BUILD_TESTS)
         tests/test_device.cpp
         tests/test_effects.cpp
         tests/test_engine.cpp
+        tests/test_i18n.cpp
     )
     target_link_libraries(cougar-tests PRIVATE cougar_core Catch2::Catch2WithMain)
     catch_discover_tests(cougar-tests)

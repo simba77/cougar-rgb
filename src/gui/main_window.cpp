@@ -2,6 +2,7 @@
 
 #include "audio.hpp"
 #include "fan_preview.hpp"
+#include "i18n.hpp"
 #include "paths.hpp"
 #include "sink.hpp"
 
@@ -21,6 +22,16 @@
 
 namespace cougar {
 
+namespace {
+
+QString t(std::string_view english)
+{
+    const std::string_view text = tr(english);
+    return QString::fromUtf8(text.data(), qsizetype(text.size()));
+}
+
+}  // namespace
+
 ColorButton::ColorButton(QWidget *parent) : QPushButton(parent)
 {
     setFixedSize(36, 28);
@@ -36,7 +47,7 @@ void ColorButton::setColor(const QString &color)
 void ColorButton::pick()
 {
     // parent is the window, not the button, otherwise the dialog inherits its background
-    const QColor color = QColorDialog::getColor(QColor(color_), window(), "Цвет");
+    const QColor color = QColorDialog::getColor(QColor(color_), window(), t("Color"));
     if (color.isValid()) {
         setColor(color.name());
         emit colorChanged();
@@ -51,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), cfg_(Config::load
     effects_ = new QListWidget;
     effects_->setMinimumWidth(230);
     for (bool hw : {true, false}) {
-        auto *header = new QListWidgetItem(hw ? "Аппаратные" : "Программные (нужна служба)");
+        auto *header = new QListWidgetItem(t(hw ? "Hardware" : "Software (needs the daemon)"));
         header->setFlags(Qt::NoItemFlags);
         QFont font = header->font();
         font.setBold(true);
@@ -60,7 +71,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), cfg_(Config::load
         for (const auto &e : cougar::effects()) {
             if (e->hardware() != hw)
                 continue;
-            auto *item = new QListWidgetItem("   " + QString::fromStdString(e->info().title));
+            auto *item = new QListWidgetItem("   " + t(e->info().title));
             item->setData(Qt::UserRole, QString::fromStdString(e->name()));
             effects_->addItem(item);
         }
@@ -77,24 +88,24 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), cfg_(Config::load
         colorsRow->addWidget(button);
     }
     colorsRow->addStretch();
-    colorsLabel_ = new QLabel("Цвета");
+    colorsLabel_ = new QLabel(t("Colors"));
 
     brightness_ = makeSlider(0, 100);
     brightnessValue_ = new QLabel;
     speed_ = makeSlider(1, 10);
     speedValue_ = new QLabel;
-    speedLabel_ = new QLabel("Скорость");
-    reverse_ = new QCheckBox("Обратное направление");
+    speedLabel_ = new QLabel(t("Speed"));
+    reverse_ = new QCheckBox(t("Reverse direction"));
     connect(reverse_, &QCheckBox::toggled, this, &MainWindow::changed);
-    random_ = new QCheckBox("Случайные цвета");
+    random_ = new QCheckBox(t("Random colors"));
     connect(random_, &QCheckBox::toggled, this, &MainWindow::changed);
 
     idle_ = new QComboBox;
     for (const auto &name : idle_choices())
-        idle_->addItem(name == IDLE_NONE ? QString("Выключено") : QString::fromStdString(find_effect(name)->info().title),
+        idle_->addItem(name == IDLE_NONE ? t("Off") : t(find_effect(name)->info().title),
                        QString::fromStdString(name));
     connect(idle_, &QComboBox::currentIndexChanged, this, &MainWindow::changed);
-    idleLabel_ = new QLabel("Когда тихо");
+    idleLabel_ = new QLabel(t("When silent"));
 
     if (const auto sink = default_sink())
         sink_ = sink->name;
@@ -102,14 +113,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), cfg_(Config::load
     delay_->setSingleStep(10);
     delay_->setPageStep(50);
     delayValue_ = new QLabel;
-    delayLabel_ = new QLabel("Задержка света");
+    delayLabel_ = new QLabel(t("Light delay"));
     delayHint_ = new QLabel;
     delayHint_->setStyleSheet("color: gray");
     delayHint_->setWordWrap(true);
 
     auto *form = new QFormLayout;
     form->addRow(colorsLabel_, colorsRow);
-    form->addRow("Яркость", withValue(brightness_, brightnessValue_));
+    form->addRow(t("Brightness"), withValue(brightness_, brightnessValue_));
     speedRow_ = withValue(speed_, speedValue_);
     form->addRow(speedLabel_, speedRow_);
     form->addRow("", reverse_);
@@ -118,15 +129,31 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), cfg_(Config::load
     delayRow_ = withValue(delay_, delayValue_);
     form->addRow(delayLabel_, delayRow_);
     form->addRow("", delayHint_);
-    auto *params = new QGroupBox("Параметры");
+    auto *params = new QGroupBox(t("Settings"));
     params->setLayout(form);
 
     status_ = new QLabel;
-    startButton_ = new QPushButton("Запустить службу");
+    startButton_ = new QPushButton(t("Start the daemon"));
     connect(startButton_, &QPushButton::clicked, this, &MainWindow::startDaemon);
+
+    // Language names are shown in their own language so anyone can find theirs.
+    language_ = new QComboBox;
+    language_->addItem(t("System default"), QString::fromUtf8(LANGUAGE_SYSTEM.data(), LANGUAGE_SYSTEM.size()));
+    language_->addItem("English", "en");
+    language_->addItem("Русский", "ru");
+    language_->setCurrentIndex(std::max(0, language_->findData(QString::fromStdString(cfg_.language))));
+    connect(language_, &QComboBox::currentIndexChanged, this, [this] {
+        cfg_.language = language_->currentData().toString().toStdString();
+        cfg_.save(paths::config_file());
+        set_language(resolve_language(cfg_.language));
+        emit languageChanged();
+    });
+
     auto *statusRow = new QHBoxLayout;
     statusRow->addWidget(status_, 1);
     statusRow->addWidget(startButton_);
+    statusRow->addWidget(new QLabel(t("Language")));
+    statusRow->addWidget(language_);
 
     auto *right = new QVBoxLayout;
     right->addWidget(preview_, 1);
@@ -210,7 +237,7 @@ void MainWindow::loadControls()
     speed_->setValue(opts.speed);
     speedRow_->setVisible(effect.info().has_speed);
     speedLabel_->setVisible(effect.info().has_speed);
-    speedLabel_->setText(QString::fromStdString(effect.info().speed_title));
+    speedLabel_->setText(t(effect.info().speed_title));
     reverse_->setChecked(opts.reverse);
     reverse_->setVisible(effect.info().has_direction);
     random_->setChecked(opts.random);
@@ -231,13 +258,13 @@ void MainWindow::loadDelay()
     loading_ = true;
     const auto it = cfg_.audio_delays.find(sink_);
     delay_->setValue(it == cfg_.audio_delays.end() ? 0 : it->second);
-    QString device = "не найдено";
+    QString device = t("not found");
     if (!sink_.empty()) {
         const auto sink = default_sink();
         device = QString::fromStdString(sink && sink->name == sink_ ? sink->description : sink_);
     }
-    delayHint_->setText(QString("Для устройства вывода: %1. Нужна для Bluetooth-наушников — "
-                                "свет ждёт, пока звук дойдёт до ушей.").arg(device));
+    delayHint_->setText(t("Output device: %1. Needed for Bluetooth headphones: the light waits until the sound "
+                          "reaches your ears.").arg(device));
     loading_ = wasLoading;
     updateLabels();
 }
@@ -246,7 +273,7 @@ void MainWindow::updateLabels()
 {
     brightnessValue_->setText(QString("%1%").arg(brightness_->value()));
     speedValue_->setText(QString::number(speed_->value()));
-    delayValue_->setText(QString("%1 мс").arg(delay_->value()));
+    delayValue_->setText(t("%1 ms").arg(delay_->value()));
 }
 
 void MainWindow::changed()
@@ -290,7 +317,7 @@ void MainWindow::save()
         } catch (const DeviceError &e) {
             direct_engine_.reset();
             direct_device_.reset();
-            status_->setText(QString("Ошибка контроллера: %1").arg(e.what()));
+            status_->setText(t("Controller error: %1").arg(e.what()));
             return;
         }
     }
@@ -321,11 +348,12 @@ void MainWindow::updateStatus()
     const bool running = paths::daemon_running();
     startButton_->setVisible(!running);
     if (running)
-        status_->setText("Служба работает");
+        status_->setText(t("The daemon is running"));
     else if (!find_effect(cfg_.effect)->hardware())
-        status_->setText("<span style=\"color:#e06c00\">Служба не запущена — программный эффект не работает</span>");
+        status_->setText(QString("<span style=\"color:#e06c00\">%1</span>")
+                             .arg(t("The daemon is not running: the software effect does not work").toHtmlEscaped()));
     else
-        status_->setText("Служба не запущена (аппаратный эффект применён напрямую)");
+        status_->setText(t("The daemon is not running (the hardware effect was applied directly)"));
 }
 
 void MainWindow::startDaemon()

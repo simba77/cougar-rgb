@@ -59,6 +59,10 @@ Config Config::parse(const std::string &text)
     if (find_effect(effect))
         cfg.effect = effect;
     read(data, "brightness", cfg.brightness);
+    std::string language;
+    read(data, "language", language);
+    if (valid_language_setting(language))
+        cfg.language = language;
     if (const auto it = data.find("audio_delays"); it != data.end() && it->is_object())
         for (const auto &[sink, value] : it->items())
             if (value.is_number())
@@ -105,6 +109,7 @@ std::string Config::dump() const
     json data;
     data["effect"] = effect;
     data["brightness"] = brightness;
+    data["language"] = language;
     data["audio_delays"] = audio_delays;
     json list = json::object();
     for (const auto &[name, opts] : effects) {

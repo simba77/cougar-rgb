@@ -2,6 +2,7 @@
 
 #include "cli.hpp"
 
+#include "i18n.hpp"
 #include "paths.hpp"
 
 #include <cstdio>
@@ -73,7 +74,8 @@ int install()
     write_file(paths::desktop_entry(), "[Desktop Entry]\n"
                                        "Type=Application\n"
                                        "Name=Cougar RGB\n"
-                                       "Comment=Подсветка корпуса\n"
+                                       "Comment=Case lighting\n"
+                                       "Comment[ru]=Подсветка корпуса\n"
                                        "Exec=" + paths::sibling_executable("cougar-rgb-gui").string() + "\n"
                                        "Icon=preferences-desktop-color\n"
                                        "Categories=Settings;HardwareSettings;\n");
@@ -82,7 +84,8 @@ int install()
         return rc;
     if (int rc = run({"systemctl", "--user", "enable", "--now", "cougar-rgb.service"}); rc != 0)
         return rc;
-    std::printf("Установлено:\n  %s\n  %s\n", paths::user_service().c_str(), paths::desktop_entry().c_str());
+    std::printf("%s\n  %s\n  %s\n", std::string(tr("Installed:")).c_str(), paths::user_service().c_str(),
+                paths::desktop_entry().c_str());
     return 0;
 }
 
