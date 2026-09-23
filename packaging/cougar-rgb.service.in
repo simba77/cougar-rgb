@@ -1,0 +1,11 @@
+[Unit]
+Description=Cougar case ARGB lighting (Gigabyte RGB Fusion 2)
+After=graphical-session.target
+
+[Service]
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/cougar-rgb daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

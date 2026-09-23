@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Cougar RGB
+Comment=Подсветка корпуса
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/cougar-rgb-gui
+Icon=preferences-desktop-color
+Categories=Settings;HardwareSettings;
