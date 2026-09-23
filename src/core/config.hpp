@@ -1,0 +1,43 @@
+#pragma once
+
+// Настройки в ~/.config/cougar-rgb/config.json. Служба перечитывает файл при изменении.
+
+#include "effects.hpp"
+
+#include <filesystem>
+#include <map>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace cougar {
+
+inline constexpr std::string_view DEFAULT_EFFECT = "sw_rainbow";
+
+struct EffectOptions {
+    std::vector<std::string> colors;
+    int speed = 5;
+    bool reverse = false;
+    bool random = false;
+    std::optional<std::string> idle;        // только у музыкальных эффектов
+};
+
+class Config {
+public:
+    Config();                               // значения по умолчанию
+
+    static Config load(const std::filesystem::path &path);
+    static Config parse(const std::string &json);
+    void save(const std::filesystem::path &path) const;
+    std::string dump() const;
+
+    std::string effect;
+    int brightness = 100;
+    std::map<std::string, int> audio_delays;
+    std::map<std::string, EffectOptions> effects;
+
+    EffectOptions &options(const std::string &name = {});
+    Params params(const std::string &name = {}) const;
+};
+
+}  // namespace cougar

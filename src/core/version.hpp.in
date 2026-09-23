@@ -1,0 +1,5 @@
+#pragma once
+
+namespace cougar {
+inline constexpr const char *VERSION = "@PROJECT_VERSION@";
+}
