@@ -3,48 +3,56 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
+  build:
+    # Сборка на Ubuntu 24.04 (Qt 6.4, glibc 2.39) — пакеты работают там и на более новых системах.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/ruff-action@v4.1.0
-
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-      - run: pip install -e ".[dev]"
-      - run: pytest -v
-
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.13"
-      - run: pip install build
-      - run: python -m build
-      - name: Smoke-test the wheel
+      - name: Install build dependencies
         run: |
-          pip install dist/*.whl
-          cougar-rgb --version
-          cougar-rgb list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build pkg-config dpkg-dev \
+            qt6-base-dev libsystemd-dev libpulse-dev nlohmann-json3-dev catch2
+      - run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-Werror
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
+      - name: Smoke-test the CLI
+        run: |
+          build/cougar-rgb --version
+          build/cougar-rgb list
+      - name: Build packages
+        working-directory: build
+        run: cpack
       - uses: actions/upload-artifact@v7
         with:
-          name: dist
-          path: dist/
+          name: packages
+          path: |
+            build/*.deb
+            build/*.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: packages
+      - name: Attach packages to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "cougar-rgb ${TAG#v}" --generate-notes
+          gh release upload "$TAG" packages/* --clobber
