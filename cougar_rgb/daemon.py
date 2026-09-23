@@ -3,6 +3,8 @@ import fcntl
 import logging
 import os
 import signal
+import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -40,6 +42,46 @@ def _suspend_gap():
     return time.clock_gettime(time.CLOCK_BOOTTIME) - time.clock_gettime(time.CLOCK_MONOTONIC)
 
 
+SLEEP_MONITOR = ['stdbuf', '-oL', 'gdbus', 'monitor', '--system', '--dest', 'org.freedesktop.login1',
+                 '--object-path', '/org/freedesktop/login1']
+
+
+def is_resume_signal(line):
+    return line.rstrip().endswith('.PrepareForSleep (false,)')
+
+
+class SleepWatcher(threading.Thread):
+    """Ловит пробуждение по сигналу logind PrepareForSleep(false).
+
+    Разница CLOCK_BOOTTIME и CLOCK_MONOTONIC не годится как единственный признак:
+    при сбитых аппаратных часах ядро почти не учитывает время сна.
+    """
+
+    def __init__(self):
+        super().__init__(name='sleep-watch', daemon=True)
+        self.resumed = threading.Event()
+        self._stop = threading.Event()
+        self._proc = None
+
+    def run(self):
+        while not self._stop.is_set():
+            try:
+                self._proc = subprocess.Popen(SLEEP_MONITOR, stdout=subprocess.PIPE,
+                                              stderr=subprocess.DEVNULL, text=True)
+                for line in self._proc.stdout:
+                    if is_resume_signal(line):
+                        self.resumed.set()
+                self._proc.wait()
+            except OSError as e:
+                log.warning('cannot watch logind sleep signals: %s', e)
+            self._stop.wait(5.0)
+
+    def stop(self):
+        self._stop.set()
+        if self._proc:
+            self._proc.terminate()
+
+
 class Daemon:
     def __init__(self):
         self.running = True
@@ -48,6 +90,7 @@ class Daemon:
         self.stamp = object()
         self.gap = _suspend_gap()
         self.last_health = 0.0
+        self.sleep_watcher = SleepWatcher()
 
     def stop(self, *_):
         self.running = False
@@ -78,11 +121,12 @@ class Daemon:
 
     def step(self):
         gap = _suspend_gap()
-        if gap - self.gap > 1.0:
-            log.info('resume from suspend detected, reapplying')
-            self.gap = gap
+        if self.sleep_watcher.resumed.is_set() or gap - self.gap > 1.0:
+            log.info('resume from suspend detected, reinitializing controller')
             time.sleep(RESUME_SETTLE)
+            self.sleep_watcher.resumed.clear()
             self.disconnect()
+            gap = _suspend_gap()
         self.gap = gap
 
         if self.dev is None and not self.connect():
@@ -107,6 +151,7 @@ class Daemon:
     def run(self):
         signal.signal(signal.SIGTERM, self.stop)
         signal.signal(signal.SIGINT, self.stop)
+        self.sleep_watcher.start()
         while self.running:
             try:
                 self.step()
@@ -115,6 +160,7 @@ class Daemon:
                 self.disconnect()
                 time.sleep(RECONNECT_DELAY)
         self.disconnect()
+        self.sleep_watcher.stop()
         audio.analyzer.stop()
 
 
