@@ -63,7 +63,7 @@ void Engine::tick()
     }
 }
 
-// Плавно подменяет музыкальный эффект эффектом для тишины, когда ничего не играет.
+// Smoothly replaces the music effect with the idle effect when nothing is playing.
 RenderFrame Engine::blend_idle(const RenderFrame &frame, double t, double now, double dt)
 {
     const Features f = analyzer().current(now);

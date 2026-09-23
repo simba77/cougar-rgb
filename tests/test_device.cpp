@@ -51,7 +51,7 @@ TEST_CASE("effect packet layout")
     CHECK(u32(buf, 2) == 1u << EFFECT_ZONE);
     CHECK(u32(buf, 6) == 0);
     CHECK((buf[11] == 2 && buf[12] == 200 && buf[13] == 3));
-    CHECK((buf[14] == 16 && buf[15] == 255 && buf[16] == 1 && buf[17] == 0));   // GRB + выравнивание
+    CHECK((buf[14] == 16 && buf[15] == 255 && buf[16] == 1 && buf[17] == 0));   // GRB + padding
     CHECK(u32(buf, 18) == 0);
     CHECK((u16(buf, 22) == 1000 && u16(buf, 24) == 900 && u16(buf, 26) == 200 && u16(buf, 28) == 0));
     CHECK((buf[30] == 7 && buf[31] == 1 && buf[32] == 2 && buf[33] == 0));

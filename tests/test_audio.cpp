@@ -42,7 +42,7 @@ TEST_CASE("a bass tone lands in the bass band")
 {
     SpectrumAnalyzer dsp;
     double t = 0;
-    // сначала широкий сигнал, чтобы автоусиление запомнило пики всех полос
+    // a broadband signal first, so auto gain remembers the peaks of all bands
     std::vector<float> mixed = tone(60, 0.3, AUDIO_RATE);
     const auto mid = tone(800, 0.3, AUDIO_RATE), high = tone(5000, 0.3, AUDIO_RATE);
     for (size_t i = 0; i < mixed.size(); ++i)
@@ -61,7 +61,7 @@ TEST_CASE("bass hits are counted as beats")
     SpectrumAnalyzer dsp;
     double t = 0;
     std::vector<float> signal;
-    for (int beat = 0; beat < 8; ++beat) {            // 8 ударов по 0.5 с: 100 мс бочки, потом тихий фон
+    for (int beat = 0; beat < 8; ++beat) {            // 8 hits every 0.5 s: 100 ms of kick drum, then a quiet background
         auto hit = tone(55, 0.8, AUDIO_RATE / 10);
         auto rest = tone(3000, 0.02, AUDIO_RATE * 4 / 10);
         signal.insert(signal.end(), hit.begin(), hit.end());

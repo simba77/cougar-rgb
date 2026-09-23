@@ -1,7 +1,7 @@
 #pragma once
 
-// Анализ звука, который играет в системе: захват монитора выхода по умолчанию через libpulse.
-// При смене устройства вывода по умолчанию захват переезжает на новый выход.
+// Analysis of the audio playing on the system: captures the default sink monitor through libpulse.
+// When the default output device changes, capture moves to the new sink.
 
 #include <array>
 #include <atomic>
@@ -18,20 +18,20 @@
 namespace cougar {
 
 inline constexpr int AUDIO_RATE = 48000;
-inline constexpr int AUDIO_WINDOW = 2048;   // окно FFT (~43 мс) — разрешение ~23 Гц, хватает для баса
-inline constexpr int AUDIO_HOP = 512;       // новый анализ каждые ~11 мс
-inline constexpr int AUDIO_FRAGMENT = 2 * AUDIO_HOP;  // звук забираем по ~21 мс: вдвое меньше пробуждений
-inline constexpr double MAX_DELAY = 1.0;    // максимальная задержка света, с
+inline constexpr int AUDIO_WINDOW = 2048;   // FFT window (~43 ms), ~23 Hz resolution, enough for bass
+inline constexpr int AUDIO_HOP = 512;       // a new analysis every ~11 ms
+inline constexpr int AUDIO_FRAGMENT = 2 * AUDIO_HOP;  // audio is fetched in ~21 ms chunks: half the wakeups
+inline constexpr double MAX_DELAY = 1.0;    // maximum light delay, s
 
 struct Features {
-    double bass = 0, mid = 0, treble = 0;   // 0..1, нормированная громкость полос
-    double level = 0;                       // общая громкость 0..1
-    long beats = 0;                         // счётчик ударов баса
-    double time = 0;                        // когда посчитано (clock::now)
-    bool active = false;                    // есть звук выше порога тишины
+    double bass = 0, mid = 0, treble = 0;   // 0..1, normalized band loudness
+    double level = 0;                       // overall loudness 0..1
+    long beats = 0;                         // bass beat counter
+    double time = 0;                        // when computed (clock::now)
+    bool active = false;                    // sound above the silence threshold
 };
 
-// Чистая обработка сигнала: окно, FFT, полосы, автоусиление, детектор ударов.
+// Pure signal processing: window, FFT, bands, auto gain, beat detection.
 class SpectrumAnalyzer {
 public:
     SpectrumAnalyzer();
@@ -41,10 +41,10 @@ public:
 private:
     std::vector<float> buffer_;
     std::vector<float> window_;
-    std::vector<float> re_, im_;                        // рабочие буферы БПФ
+    std::vector<float> re_, im_;                        // FFT work buffers
     std::vector<float> twiddle_re_, twiddle_im_;
     std::vector<uint32_t> bitrev_;
-    std::array<std::pair<int, int>, 3> band_bins_{};    // [первый, последний) бин каждой полосы
+    std::array<std::pair<int, int>, 3> band_bins_{};    // [first, last) bin of each band
     std::array<double, 3> peaks_{};
     double peak_level_ = 1e-3;
     double bass_avg_ = 0;
@@ -63,15 +63,15 @@ public:
     void stop();
     bool running() const { return running_; }
 
-    // Задержка света по устройствам вывода, мс.
+    // Light delay per output device, ms.
     void set_delays(std::map<std::string, int> delays);
-    double delay() const;                   // для текущего выхода, с
+    double delay() const;                   // for the current output, s
     std::string sink() const;
 
     Features latest() const;
-    Features current(double now) const;     // с учётом задержки света
+    Features current(double now) const;     // with the light delay applied
 
-    // Для захвата и тестов.
+    // For the capture and tests.
     void push(const Features &features);
     void set_sink(const std::string &sink);
     void set_capture_enabled(bool enabled) { capture_enabled_ = enabled; }

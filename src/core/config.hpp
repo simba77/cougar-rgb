@@ -1,6 +1,6 @@
 #pragma once
 
-// Настройки в ~/.config/cougar-rgb/config.json. Служба перечитывает файл при изменении.
+// Settings in ~/.config/cougar-rgb/config.json. The daemon rereads the file when it changes.
 
 #include "effects.hpp"
 
@@ -19,12 +19,12 @@ struct EffectOptions {
     int speed = 5;
     bool reverse = false;
     bool random = false;
-    std::optional<std::string> idle;        // только у музыкальных эффектов
+    std::optional<std::string> idle;        // audio effects only
 };
 
 class Config {
 public:
-    Config();                               // значения по умолчанию
+    Config();                               // defaults
 
     static Config load(const std::filesystem::path &path);
     static Config parse(const std::string &json);

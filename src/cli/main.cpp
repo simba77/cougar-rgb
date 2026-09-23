@@ -1,4 +1,4 @@
-// Командная строка: cougar-rgb <команда>.
+// Command line: cougar-rgb <command>.
 
 #include "cli.hpp"
 

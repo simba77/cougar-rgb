@@ -1,4 +1,4 @@
-// Фоновая служба: держит эффект применённым и рисует программные анимации.
+// Background daemon: keeps the effect applied and renders software animations.
 
 #include "cli.hpp"
 
@@ -72,10 +72,10 @@ bool same_stamp(const std::optional<std::timespec> &a, const std::optional<std::
     return a->tv_sec == b->tv_sec && a->tv_nsec == b->tv_nsec;
 }
 
-// Ловит пробуждение по сигналу logind PrepareForSleep(false).
+// Detects resume from logind's PrepareForSleep(false) signal.
 //
-// Разница CLOCK_BOOTTIME и CLOCK_MONOTONIC не годится как единственный признак:
-// при сбитых аппаратных часах ядро почти не учитывает время сна.
+// The CLOCK_BOOTTIME/CLOCK_MONOTONIC gap is not reliable on its own:
+// with a wrong hardware clock the kernel barely accounts for the time spent asleep.
 class SleepWatcher {
 public:
     std::atomic<bool> resumed{false};
@@ -207,7 +207,7 @@ private:
         } else {
             if (now - last_health_ > HEALTH_INTERVAL) {
                 last_health_ = now;
-                dev_->info();       // выбросит DeviceError, если контроллер пропал
+                dev_->info();       // throws DeviceError if the controller is gone
             }
             sleep_for(0.1);
         }

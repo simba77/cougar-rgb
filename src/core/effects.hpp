@@ -1,10 +1,10 @@
 #pragma once
 
-// Эффекты подсветки.
+// Lighting effects.
 //
-// Аппаратные (Kind::Hardware) исполняет прошивка контроллера — работают без запущенной службы.
-// Программные (Kind::Software) рисуются кадр за кадром службой в попиксельном режиме.
-// Скорость везде 1..10 (10 — быстрее всего), яркость 0..100 %.
+// Hardware ones (Kind::Hardware) run in the controller firmware and work without the daemon.
+// Software ones (Kind::Software) are rendered frame by frame by the daemon in per-LED mode.
+// Speed is 1..10 everywhere (10 is the fastest), brightness 0..100 %.
 
 #include "color.hpp"
 #include "device.hpp"
@@ -26,7 +26,7 @@ struct Params {
     int speed = 5;
     bool reverse = false;
     bool random = false;
-    std::shared_ptr<const Params> idle;     // эффект для тишины (только у музыкальных)
+    std::shared_ptr<const Params> idle;     // effect shown during silence (audio effects only)
 
     Rgb rgb(size_t i) const { return colors.empty() ? Rgb{255, 255, 255} : colors[i % colors.size()]; }
 };
@@ -37,13 +37,13 @@ struct EffectInfo {
     std::string name;
     std::string title;
     Kind kind = Kind::Software;
-    int colors = 0;                         // сколько цветов настраивается
+    int colors = 0;                         // number of configurable colors
     std::vector<std::string> default_colors;
     bool has_speed = true;
     bool has_random = false;
     bool has_direction = false;
     std::string speed_title = "Скорость";
-    bool audio = false;                     // нужен анализ звука (запускается только службой)
+    bool audio = false;                     // needs audio analysis (started by the daemon only)
     int fps = 30;
 };
 
@@ -57,7 +57,7 @@ public:
     bool hardware() const { return info_.kind == Kind::Hardware; }
 
     virtual EffectPacket hw_packet(const Params &) const { return {}; }
-    // Кадр до применения яркости; компоненты 0..255.
+    // Frame before brightness is applied; components 0..255.
     virtual RenderFrame render(double t, const Params &p) = 0;
 
 private:
@@ -71,7 +71,7 @@ inline constexpr std::string_view IDLE_NONE = "none";
 inline constexpr std::string_view IDLE_DEFAULT = "sw_rainbow";
 const std::vector<std::string> &idle_choices();
 
-// Перцептивная шкала: 50 % на слайдере выглядит как половина яркости.
+// Perceptual scale: 50 % on the slider looks like half the brightness.
 Frame apply_brightness(const RenderFrame &frame, int brightness);
 
 }  // namespace cougar

@@ -10,7 +10,7 @@ struct SinkInfo {
     std::string description;
 };
 
-// Текущее устройство вывода по умолчанию (синхронный запрос к PulseAudio/PipeWire, до ~2 с).
+// Current default output device (synchronous PulseAudio/PipeWire query, up to ~2 s).
 std::optional<SinkInfo> default_sink();
 
 }  // namespace cougar

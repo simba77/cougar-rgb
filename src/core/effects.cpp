@@ -38,13 +38,13 @@ int clamp_speed(const Params &p)
     return std::clamp(p.speed, 1, 10);
 }
 
-// 0 — самый быстрый, 9 — самый медленный, как в RGB Fusion
+// 0 is the fastest, 9 the slowest, as in RGB Fusion
 int hw_speed(const Params &p)
 {
     return 10 - clamp_speed(p);
 }
 
-// Плавная шкала скорости: speed=1 → slow, speed=10 → fast (геометрически).
+// Smooth speed scale: speed=1 -> slow, speed=10 -> fast (geometric).
 double rate(const Params &p, double slow, double fast)
 {
     const double k = (clamp_speed(p) - 1) / 9.0;
@@ -61,7 +61,7 @@ int direction(const Params &p)
     return p.reverse ? -1 : 1;
 }
 
-// ------------------------------------------------------------------ аппаратные
+// ------------------------------------------------------------------ hardware
 
 struct HwOff : Effect {
     using Effect::Effect;
@@ -143,7 +143,7 @@ struct HwCycle : Effect {
     }
 };
 
-// ------------------------------------------------------------------ программные
+// ------------------------------------------------------------------ software
 
 struct SwRainbow : Effect {
     using Effect::Effect;
@@ -219,17 +219,17 @@ struct SwFire : Effect {
     }
 };
 
-// Каждый диод независимо и плавно переходит в новый случайный цвет.
+// Each LED independently and smoothly fades to a new random color.
 struct SwRandom : Effect {
     using Effect::Effect;
-    static constexpr double FADE = 0.4;     // доля периода на переход
+    static constexpr double FADE = 0.4;     // share of the period spent fading
     static Rgb color(int i, long n) { return hsv(seeded_random(uint64_t(i) * 100003 + uint64_t(n))); }
     RenderFrame render(double t, const Params &p) override
     {
         const double period = 1 / rate(p, 1 / 6.0, 1 / 0.4);
         RenderFrame frame;
         for (int i = 0; i < LED_COUNT; ++i) {
-            const double phase = seeded_random(uint64_t(i) + 0xC0FFEE) * period;  // диоды меняются не одновременно
+            const double phase = seeded_random(uint64_t(i) + 0xC0FFEE) * period;  // LEDs do not change at the same time
             const double n = std::floor((t + phase) / period), x = t + phase - n * period;
             const double k = std::max(0.0, (x / period - (1 - FADE)) / FADE);
             frame[i] = mix(color(i, long(n)), color(i, long(n) + 1), k);
@@ -249,7 +249,7 @@ struct SwCustom : Effect {
     }
 };
 
-// Эффект под музыку. Без анализатора (в предпросмотре GUI) имитирует ритм 120 BPM.
+// Music effect. Without the analyzer (in the GUI preview) it simulates a 120 BPM beat.
 struct AudioEffect : Effect {
     explicit AudioEffect(EffectInfo info) : Effect(with_audio(std::move(info))) {}
 
@@ -286,7 +286,7 @@ struct AudioEffect : Effect {
     }
 };
 
-// Вспышка на ударе баса с затуханием; между ударами подсветка дышит уровнем баса.
+// Flash on each bass hit with a decay; between hits the lighting breathes with the bass level.
 struct SwBassPulse : AudioEffect {
     using AudioEffect::AudioEffect;
     double env = 0;
@@ -312,7 +312,7 @@ struct SwBassPulse : AudioEffect {
     }
 };
 
-// Оттенок по балансу частот: бас — красный, середина — зелёный/голубой, верх — фиолетовый.
+// Hue from the frequency balance: bass is red, mids green/cyan, highs violet.
 struct SwSpectrumColor : AudioEffect {
     using AudioEffect::AudioEffect;
     double hue = 0, level = 0;

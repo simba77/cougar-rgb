@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    # Сборка на Ubuntu 24.04 (Qt 6.4, glibc 2.39) — пакеты работают там и на более новых системах.
+    # Built on Ubuntu 24.04 (Qt 6.4, glibc 2.39): the packages run there and on newer systems.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

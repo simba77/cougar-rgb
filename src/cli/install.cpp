@@ -1,4 +1,4 @@
-// Установка systemd-службы пользователя и ярлыка в меню (для запуска из архива, без пакета).
+// Installs the systemd user service and the menu entry (for running from the tarball, without the package).
 
 #include "cli.hpp"
 
@@ -37,7 +37,7 @@ int run(std::vector<std::string> args, bool quiet = false)
     return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 }
 
-// Рабочие столы кэшируют ярлыки: без обновления кэша меню может запускать старую команду.
+// Desktops cache menu entries: without a cache refresh the menu may keep launching the old command.
 void refresh_menu_cache()
 {
     const auto dir = paths::desktop_entry().parent_path().string();
@@ -57,7 +57,7 @@ void write_file(const std::filesystem::path &path, const std::string &content)
 int install()
 {
     if (std::filesystem::exists(paths::system_service())) {
-        // Служба и ярлык уже поставлены пакетом — достаточно включить.
+        // The service and the menu entry come with the package; enabling is enough.
         return run({"systemctl", "--user", "enable", "--now", "cougar-rgb.service"});
     }
     const auto self = paths::self_executable().string();

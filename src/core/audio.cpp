@@ -15,8 +15,8 @@ namespace cougar {
 namespace {
 
 constexpr double SILENCE_RMS = 1e-4;
-const double PEAK_DECAY = std::pow(0.5, double(AUDIO_HOP) / AUDIO_RATE / 4.0);  // полураспад пика ~4 с
-constexpr double BEAT_AVG = double(AUDIO_HOP) / AUDIO_RATE / 0.25;              // среднее баса за ~0.25 с
+const double PEAK_DECAY = std::pow(0.5, double(AUDIO_HOP) / AUDIO_RATE / 4.0);  // peak half-life ~4 s
+constexpr double BEAT_AVG = double(AUDIO_HOP) / AUDIO_RATE / 0.25;              // bass average over ~0.25 s
 constexpr double BEAT_RATIO = 1.35;
 constexpr double BEAT_MIN_LEVEL = 0.3;
 constexpr double BEAT_COOLDOWN = 0.12;
@@ -37,8 +37,8 @@ SpectrumAnalyzer::SpectrumAnalyzer()
     : window_(AUDIO_WINDOW), re_(AUDIO_WINDOW), im_(AUDIO_WINDOW), twiddle_re_(AUDIO_WINDOW / 2),
       twiddle_im_(AUDIO_WINDOW / 2), bitrev_(AUDIO_WINDOW)
 {
-    // Всё, что не зависит от сигнала, считаем один раз: окно Ханна, поворотные множители,
-    // перестановку битов и границы полос в бинах.
+    // Everything independent of the signal is computed once: Hann window, twiddle factors,
+    // bit-reversal permutation and band limits in bins.
     for (int i = 0; i < AUDIO_WINDOW; ++i)
         window_[i] = float(0.5 - 0.5 * std::cos(2 * std::numbers::pi * i / (AUDIO_WINDOW - 1)));
     for (int k = 0; k < AUDIO_WINDOW / 2; ++k) {
@@ -77,8 +77,8 @@ Features SpectrumAnalyzer::feed(std::span<const float> hop, double now)
     if (rms < SILENCE_RMS)
         return Features{.beats = beats_, .time = now};
 
-    // Итеративное БПФ по основанию 2 с готовыми таблицами.
-    // Явная арифметика вместо std::complex: без -ffast-math его умножение уходит в медленную __mulsc3.
+    // Iterative radix-2 FFT using the precomputed tables.
+    // Explicit arithmetic instead of std::complex: without -ffast-math its multiply calls the slow __mulsc3.
     for (int i = 0; i < AUDIO_WINDOW; ++i) {
         re_[bitrev_[i]] = buffer_[i] * window_[i];
         im_[bitrev_[i]] = 0;
@@ -118,7 +118,7 @@ Features SpectrumAnalyzer::feed(std::span<const float> hop, double now)
 }
 
 // --------------------------------------------------------------------------------------------
-// Сеанс PulseAudio/PipeWire: подключение, слежение за выходом по умолчанию и захват его монитора.
+// PulseAudio/PipeWire session: connection, tracking of the default sink and capture of its monitor.
 
 struct PulseSession {
     Analyzer &owner;
@@ -213,7 +213,7 @@ struct PulseSession {
         auto *self = static_cast<PulseSession *>(userdata);
         const auto state = pa_stream_get_state(s);
         if (state == PA_STREAM_FAILED || state == PA_STREAM_TERMINATED)
-            self->disconnect_stream();      // переподключимся при следующем событии сервера
+            self->disconnect_stream();      // reconnect on the next server event
     }
 
     static void on_read(pa_stream *s, size_t, void *userdata)
@@ -241,7 +241,7 @@ struct PulseSession {
         self->pending.erase(self->pending.begin(), self->pending.begin() + used);
     }
 
-    // Работает, пока сеанс жив и анализатор не остановлен.
+    // Runs while the session is alive and the analyzer is not stopped.
     void run()
     {
         loop = pa_threaded_mainloop_new();
@@ -304,7 +304,7 @@ void Analyzer::run()
     while (!stop_) {
         PulseSession(*this).run();
         std::unique_lock lock(wait_mutex_);
-        wait_cv_.wait_for(lock, std::chrono::seconds(1), [&] { return bool(stop_); });  // сервер упал — повторим
+        wait_cv_.wait_for(lock, std::chrono::seconds(1), [&] { return bool(stop_); });  // the server went away, retry
     }
 }
 

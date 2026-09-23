@@ -35,7 +35,7 @@ void read(const json &obj, const char *key, T &out)
     try {
         out = it->get<T>();
     } catch (const json::exception &) {
-        // неверный тип — оставляем значение по умолчанию
+        // wrong type: keep the default
     }
 }
 

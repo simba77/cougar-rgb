@@ -9,7 +9,7 @@
 
 namespace cougar::test {
 
-// Записывает пакеты вместо отправки на контроллер.
+// Records packets instead of sending them to the controller.
 struct RecordingTransport : Transport {
     std::vector<Packet> sent;
     Packet reply{};
@@ -17,7 +17,7 @@ struct RecordingTransport : Transport {
     Packet get_feature(uint8_t) override { return reply; }
 };
 
-// Записывает высокоуровневые вызовы движка.
+// Records high-level engine calls.
 struct FakeController : Controller {
     struct Call {
         std::string name;
@@ -43,7 +43,7 @@ struct FakeController : Controller {
     }
 };
 
-// Управляемые часы и анализатор без реального захвата звука.
+// Controlled clock and an analyzer without real audio capture.
 struct TestClock {
     double now = 1000.0;
     TestClock()

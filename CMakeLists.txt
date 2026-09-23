@@ -13,7 +13,7 @@ endif()
 option(COUGAR_BUILD_GUI "Build the Qt GUI" ON)
 option(COUGAR_BUILD_TESTS "Build unit tests" ON)
 
-# Пути к бинарникам вшиваются в systemd-юнит и ярлык, поэтому по умолчанию ставим как пакет — в /usr.
+# Binary paths are embedded in the systemd unit and the desktop entry, so install like a package, into /usr, by default.
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Install prefix" FORCE)
 endif()

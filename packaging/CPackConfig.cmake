@@ -1,4 +1,4 @@
-# Пакеты релиза: .deb для Debian/Ubuntu и .tar.gz с бинарниками.
+# Release packages: .deb for Debian/Ubuntu and a .tar.gz with the binaries.
 set(CPACK_PACKAGE_NAME "cougar-rgb")
 set(CPACK_PACKAGE_VENDOR "simba77")
 set(CPACK_PACKAGE_CONTACT "simba77 <simba7@inbox.ru>")

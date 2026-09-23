@@ -6,7 +6,7 @@
 
 namespace cougar {
 
-// Схематичный вентилятор: светодиод 0 на 3 часах, дальше по часовой через 45°.
+// Schematic fan: LED 0 at 3 o'clock, then clockwise every 45°.
 class FanPreview : public QWidget {
     Q_OBJECT
 public:

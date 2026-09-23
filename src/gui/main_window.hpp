@@ -1,6 +1,6 @@
 #pragma once
 
-// Главное окно. Сохраняет настройки в конфиг — служба применяет их на лету.
+// Main window. Saves settings to the config; the daemon applies them live.
 
 #include "config.hpp"
 #include "device.hpp"

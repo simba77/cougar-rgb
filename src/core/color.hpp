@@ -8,12 +8,12 @@
 
 namespace cougar {
 
-// Цвет в процессе расчёта эффекта: компоненты 0..255, могут быть дробными.
+// Color while an effect is being computed: components 0..255, may be fractional.
 struct Rgb {
     double r = 0, g = 0, b = 0;
 };
 
-// Цвет, готовый к отправке на контроллер.
+// Color ready to be sent to the controller.
 struct Rgb8 {
     uint8_t r = 0, g = 0, b = 0;
     bool operator==(const Rgb8 &) const = default;
@@ -25,7 +25,7 @@ Rgb hsv(double h, double s = 1.0, double v = 1.0);
 Rgb mix(Rgb a, Rgb b, double t);
 Rgb scale(Rgb c, double k);
 
-// Детерминированное псевдослучайное число 0..1 по зерну (вместо random.Random(seed).random()).
+// Deterministic pseudo-random number 0..1 from a seed.
 double seeded_random(uint64_t seed);
 
 }  // namespace cougar

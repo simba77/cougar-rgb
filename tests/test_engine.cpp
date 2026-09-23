@@ -53,7 +53,7 @@ TEST_CASE("audio effect crossfades to the idle effect on silence")
     const Config cfg;
     Engine engine(dev);
     engine.apply("sw_spectrum_color", cfg.params("sw_spectrum_color"));
-    CHECK(engine.fps() == 30);                           // в тишине показываем idle с обычной частотой
+    CHECK(engine.fps() == 30);                           // idle is shown at the regular frame rate during silence
 
     auto run = [&](double seconds, bool active) {
         for (int i = 0; i < int(seconds * 60); ++i) {
@@ -64,13 +64,13 @@ TEST_CASE("audio effect crossfades to the idle effect on silence")
         return engine.idle_mix();
     };
 
-    CHECK(engine.idle_mix() == 1.0);                     // стартуем в тишине
-    CHECK(run(0.5, true) == Catch::Approx(0.0).margin(1e-6));
-    CHECK(engine.fps() == 60);                           // под музыку — 60 кадров/с                        // музыка — быстро уходим с idle
-    CHECK(run(2.0, false) == Catch::Approx(0.0).margin(1e-6));                       // короткая пауза idle не включает
-    CHECK(run(2.0, false) == Catch::Approx(1.0).margin(1e-6));                       // после 3 с тишины — idle
+    CHECK(engine.idle_mix() == 1.0);                              // starts in silence
+    CHECK(run(0.5, true) == Catch::Approx(0.0).margin(1e-6));      // music: leave idle quickly
+    CHECK(engine.fps() == 60);                                    // 60 fps under music
+    CHECK(run(2.0, false) == Catch::Approx(0.0).margin(1e-6));     // a short pause keeps the music effect
+    CHECK(run(2.0, false) == Catch::Approx(1.0).margin(1e-6));     // idle after 3 s of silence
     const double back = run(0.15, true);
-    CHECK((back > 0.01 && back < 0.99));                       // плавный возврат
+    CHECK((back > 0.01 && back < 0.99));                          // smooth return
     CHECK(run(0.3, true) == Catch::Approx(0.0).margin(1e-6));
 }
 
@@ -82,7 +82,7 @@ TEST_CASE("stale analyzer data counts as silence")
     Engine engine(dev);
     engine.apply("sw_bass_pulse", cfg.params("sw_bass_pulse"));
     analyzer().push({.level = 1.0, .time = clock.now, .active = true});
-    for (int i = 0; i < 5 * 60; ++i) {                   // данные перестали приходить
+    for (int i = 0; i < 5 * 60; ++i) {                   // data stopped arriving
         clock.now += 1 / 60.0;
         engine.tick();
     }
@@ -98,7 +98,7 @@ TEST_CASE("light delay reads older features for the current output only")
         analyzer().push({.level = i / 100.0, .time = clock.now, .active = true});
     }
     CHECK(analyzer().current(clock.now).level == Catch::Approx(0.99));
-    analyzer().set_delays({{"bt", 305}});                // середина между отсчётами, без граничных эффектов
+    analyzer().set_delays({{"bt", 305}});                // halfway between samples, no float boundary effects
     CHECK(analyzer().current(clock.now).level == Catch::Approx(0.68));
     analyzer().set_delays({{"speakers", 305}});
     CHECK(analyzer().current(clock.now).level == Catch::Approx(0.99));

@@ -35,7 +35,7 @@ void ColorButton::setColor(const QString &color)
 
 void ColorButton::pick()
 {
-    // родитель — окно, а не кнопка, иначе диалог унаследует её фон
+    // parent is the window, not the button, otherwise the dialog inherits its background
     const QColor color = QColorDialog::getColor(QColor(color_), window(), "Цвет");
     if (color.isValid()) {
         setColor(color.name());
@@ -278,7 +278,7 @@ void MainWindow::save()
     cfg_.save(paths::config_file());
     if (paths::daemon_running())
         return;
-    // Без службы аппаратные эффекты применяем сами — прошивка дальше справится
+    // Without the daemon apply hardware effects directly; the firmware keeps them running
     if (find_effect(cfg_.effect)->hardware()) {
         try {
             if (!direct_engine_) {
@@ -306,7 +306,7 @@ void MainWindow::animate()
 {
     Effect *effect = find_effect(cfg_.effect);
     const Params params = cfg_.params();
-    // предпросмотр чуть приподнят по яркости, иначе на экране тусклые цвета теряются
+    // the preview gets a brightness floor, otherwise dim colors get lost on screen
     preview_->setFrame(apply_brightness(effect->render(elapsed(), params), std::max(params.brightness, 15)));
 }
 

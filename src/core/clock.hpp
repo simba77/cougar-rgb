@@ -4,7 +4,7 @@
 
 namespace cougar::clock {
 
-// Монотонное время в секундах; в тестах подменяется.
+// Monotonic time in seconds; replaced in tests.
 double now();
 void set_for_tests(std::function<double()> source);
 

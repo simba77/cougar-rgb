@@ -56,7 +56,7 @@ TEST_CASE("invalid values fall back to defaults")
     CHECK(cfg.brightness == 100);
     CHECK(cfg.effects.at("sw_bass_pulse").idle == std::string(IDLE_DEFAULT));
     CHECK(cfg.effects.at("sw_bass_pulse").speed == 5);
-    CHECK(cfg.effects.at("sw_comet").colors.size() == 2);    // недостающий цвет дополнен
+    CHECK(cfg.effects.at("sw_comet").colors.size() == 2);    // missing color filled in
 }
 
 TEST_CASE("broken file gives defaults")
