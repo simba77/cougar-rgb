@@ -7,8 +7,6 @@ ARGB header should work.
 
 ![GUI](docs/screenshot.png)
 
-> The GUI and CLI messages are currently in Russian.
-
 ## Why
 
 Existing Linux tools could switch modes, but the lighting stayed noticeably dimmer than under
@@ -32,6 +30,8 @@ per-LED software effects the firmware does not have.
   music effect is running.
 - **Native Qt 6 GUI** with a live fan preview that follows your desktop theme, and a **CLI** for
   scripting.
+- **English and Russian** interface. The system language is used by default; pick another one in
+  the GUI or with `cougar-rgb set --language en|ru|system`.
 
 ## Hardware
 
@@ -110,6 +110,7 @@ cougar-rgb set static -c ff0040 -b 80            # hardware static color at 80 %
 cougar-rgb set sw_rainbow -s 7 --reverse         # software rainbow, faster, counterclockwise
 cougar-rgb set sw_bass_pulse --random --idle sw_fire
 cougar-rgb set --delay 250                       # light delay for the current output, ms
+cougar-rgb set --language en                     # interface language: system, en or ru
 ```
 
 Settings are stored in `~/.config/cougar-rgb/config.json`. Hardware effects set without the
