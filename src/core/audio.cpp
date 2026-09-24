@@ -180,10 +180,23 @@ struct PulseSession {
         if (!stream)
             return;
         pa_stream_set_read_callback(stream, nullptr, nullptr);
-        pa_stream_set_state_callback(stream, nullptr, nullptr);
-        pa_stream_disconnect(stream);
+        if (pa_stream_get_state(stream) == PA_STREAM_CREATING) {
+            // pa_stream_disconnect() is refused until the server confirms the stream, and an abandoned
+            // stream keeps capturing: its unread data stalls the live stream. Finish it once it is ready;
+            // the context holds its own reference until then.
+            pa_stream_set_state_callback(stream, on_abandoned_state, nullptr);
+        } else {
+            pa_stream_set_state_callback(stream, nullptr, nullptr);
+            pa_stream_disconnect(stream);
+        }
         pa_stream_unref(stream);
         stream = nullptr;
+    }
+
+    static void on_abandoned_state(pa_stream *s, void *)
+    {
+        if (pa_stream_get_state(s) == PA_STREAM_READY)
+            pa_stream_disconnect(s);
     }
 
     void connect_stream(const std::string &sink)
